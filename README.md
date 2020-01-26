@@ -13,6 +13,8 @@
 ***
 > ▪ CorpseReborn ➥ https://www.spigotmc.org/resources/corpsereborn.29875/
 ***
+> ▪ PacketInjectorAPI ➥ https://www.spigotmc.org/resources/packetinjectorapi-send-packet-to-client-and-to-server.57931/
+***
 
 ![GitHub release](https://img.shields.io/github/release/andrei923/DeadByDeadlight.svg?style=for-the-badge)
 ![GitHub issues](https://img.shields.io/github/issues-raw/andrei923/DeadByDeadlight.svg?style=for-the-badge)
