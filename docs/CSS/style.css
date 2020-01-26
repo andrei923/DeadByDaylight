@@ -1,0 +1,87 @@
+@import url('https://fonts.googleapis.com/css?family=Roboto:400,400i,700,700i');
+
+body {
+   font-family: "Roboto", sans-serif;
+   min-height: 100vh;
+   display: grid;
+   place-content: center;
+   background-color: #34495e;
+   background-image: url("https://andrei923.github.io/LeafBattleRoyale/IMG/background.png");
+   background-size: 2000px;
+   background-position: center;
+   text-align: center;
+   color: #34495e;
+   text-rendering: geometricPrecision;
+   grid-gap: 10px;
+}
+
+#message {
+   display: grid;
+   place-items: center;
+}
+
+#container {
+   background-color: white;
+   padding: 40px;
+   display: grid;
+   border-radius: 5px;
+   max-width: 500px;
+   min-height: 500px;
+   box-shadow: 10px 10px rgb(0, 0, 0, 0.1);
+}
+
+#container2 {
+   background-color: white;
+   padding: 40px;
+   display: grid;
+   border-radius: 5px;
+   max-width: autob;
+   min-height: 30px;
+   box-shadow: 10px 10px rgb(0, 0, 0, 0.2);
+}
+
+h1 {font-size: 2.8em;}
+
+h3 {font-size: 2em;}
+
+#description {
+   display: grid;
+   place-items: center;
+   align-content: center;
+   grid-gap: 10px;
+   text-align: center;
+}
+
+.button {
+   text-decoration: none;
+   color: white;
+   padding: 15px;
+   background-color: #2ecc71;
+   font-size: 1em;
+}
+
+.button2 {
+   text-decoration: none;
+   color: white;
+   padding: 15px;
+   font-size: 1em;
+}
+
+.download {
+   display: grid;
+   place-items: center;
+   place-content: center;
+   grid-gap: 20px;
+}
+
+.button:hover {
+   background-color: #27ae60;
+}
+
+.button:active {
+   background-color: #2ecc71;
+}
+
+p {
+   font-size: 1.3em;
+}

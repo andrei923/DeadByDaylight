@@ -1,0 +1,1253 @@
+import:
+	java.lang.Math
+	java.util.Arrays 
+	java.util.ArrayList	
+	org.bukkit.Sound	
+	org.bukkit.Material		
+	org.bukkit.material.MaterialData	 	
+	org.bukkit.Location
+	org.bukkit.Bukkit
+	org.bukkit.util.EulerAngle 
+	org.golde.bukkit.corpsereborn.CorpseAPI.CorpseAPI
+	org.bukkit.util.Vector
+	fr.mrmicky.fastparticle.FastParticle
+	fr.mrmicky.fastparticle.ParticleType	
+	com.fren_gor.packetUtils.events.PacketRetriveEvent
+	org.bukkit.event.player.PlayerArmorStandManipulateEvent
+	org.bukkit.event.player.PlayerInteractEvent
+	org.bukkit.event.player.PlayerToggleFlightEvent
+	
+	
+option nms:
+    get: 
+        set {_nms} to Bukkit.getServer().getClass().getPackage().getName().split("\.")[3]
+        return {_nms}
+
+import:
+	net.minecraft.server.{@nms}.MojangsonParser
+	net.minecraft.server.{@nms}.NBTTagCompound
+	org.bukkit.craftbukkit.{@nms}.inventory.CraftItemStack
+
+options:
+
+	#do not touch this -_-
+	plugin-version: 0.0.1
+
+local effect [leaf] send title %string% with subtitle %string% to %players% with %number% fadein and %number% fadeout for %number%:		
+	trigger:
+		loop exprs-3:
+			{-dbd::cache::TitleManager}.sendTitle(loop-value-1, expr-1, expr-4, expr-5 and expr-6)
+			{-dbd::cache::TitleManager}.sendSubtitle(loop-value-1 and expr-2)
+
+local effect [leaf] send action[ ]bar %string% to %players%:		
+	trigger:
+		loop exprs-2:
+			{-dbd::cache::TitleManager}.sendActionbar(loop-value-1 and expr-1)
+			
+local effect create scoreboard for %player%:	
+	trigger:
+		if {-dbd::cache::TitleManager}.hasScoreboard(expr-1) is true:
+			{-dbd::cache::TitleManager}.removeScoreboard(expr-1)
+		{-dbd::cache::TitleManager}.giveScoreboard(expr-1)
+
+local effect [leaf] send action bar %string% to %players%:	
+	trigger:
+		loop exprs-2:
+			{-dbd::cache::TitleManager}.sendActionbar(loop-value-1 and expr-1)
+
+local effect delete scoreboard of %player%:	
+	trigger:
+		{-dbd::cache::TitleManager}.removeScoreboard(expr-1)	
+
+local effect set scoreboard title of %player% to %string%:	
+	trigger:
+		{-dbd::cache::TitleManager}.setScoreboardTitle(expr-1 and expr-2)
+
+local effect set scoreboard line %number% of %player% to %string%:	
+	trigger:
+		{-dbd::cache::TitleManager}.setScoreboardValue(expr-2, expr-1 and expr-3)
+
+local expression [leaf] progress from %number% and %number% with size %number% and text %text% and %text%:
+	return type: text
+	get:
+		set {_bar} to rounded expr-1 * expr-3/expr-2
+		{_bar} != 0:
+			loop {_bar} times:
+				add expr-4 to {_stuff::*}
+		set {_r} to expr-3
+		loop {_r} - {_bar} times:
+			add expr-5 to {_stuff::*}
+		expr-3 = {_bar}:
+			delete {_stuff::*}
+			loop expr-3 times:
+				add expr-4 to {_stuff::*}		
+		set {_result} to join {_stuff::*} with ""
+		return {_result}
+
+local effect [leaf] create hologram[s] at %location% named %objects% [with %-number% distance between lines]:
+	trigger:
+		set {_loc} to expression-1
+		{_loc}.getChunk().load()
+		if parse mark is 1:
+			set {_distance} to expression-3
+		else:
+			set {_distance} to 0.3
+		loop expressions 2:
+			delete {_stand}
+			set {_msg} to loop-value-1
+			loop armor stands in radius 0.1 of {_loc}:
+				set {_stand} to loop-entity
+				#delete loop-entity
+			if {_stand} is not set:			
+				spawn an armor stand at {_loc}
+				set {_stand} to spawned armor stand
+			set metadata value "LEAF_HOLO" of {_stand} to true
+			{_stand}.setMarker(true)
+			{_stand}.setVisible(false)
+			{_stand}.setGravity(false)
+			if {_msg} is not "" or " ":
+				{_stand}.setCustomNameVisible(true)
+				{_stand}.setCustomName(colored {_msg})
+			add {_distance} to y-coords of {_loc}
+			wait a tick
+
+function check_yaml(dir: text, value: text, set: text, type: text = "TEXT"):
+	yaml value {_value} from "leaf.dbd.%{_dir}%" is not set:
+		if {_type} is "text":
+			set yaml value {_value} from "leaf.dbd.%{_dir}%" to {_set}
+		if {_type} is "number":
+			set yaml value {_value} from "leaf.dbd.%{_dir}%" to {_set} parsed as number
+		if {_type} is "boolean":
+			set yaml value {_value} from "leaf.dbd.%{_dir}%" to {_set} parsed as boolean
+	if {_type} is "list":
+		yaml list {_value} from "leaf.dbd.%{_dir}%" is not set
+		loop {_set} split at "||":
+			add loop-value to yaml list {_value} from "leaf.dbd.%{_dir}%"
+
+local expression nbt of %entity%:
+    add:
+        set {_nbt} to new NBTTagCompound()
+        set {_e} to expression-1.getHandle()
+        {_e}.c({_nbt})
+        set {_nbt2} to MojangsonParser.parse(change value)
+        {_nbt}.a({_nbt2})
+        {_e}.f({_nbt})	
+
+expression %item% with [custom] nbt %string%:
+	return type: item
+	get:
+		if expr-1 = air:
+			return
+		set {_i} to expression-1	
+		set {_n} to name of expression-1	
+		set {_i} to CraftItemStack.asNMSCopy({_i})
+		set {_nbt} to MojangsonParser.parse(expression-2)
+		{_i}.setTag({_nbt})
+		set {_r} to CraftItemStack.asBukkitCopy({_i})
+		set name of {_r} to {_n}
+		return {_r}
+		
+expression %item% with [leaf] lore %texts%:
+	return type: item
+	get:
+		set {_r} to expr-1
+		loop expressions 2:
+			set {_lore} to loop-value-1
+			add 1 to {_line}			
+			set line {_line} of lore of {_r} to colored {_lore}		
+		return {_r}
+
+#From https://forums.skunity.com/resources/mirrorutils.706/ by EWS
+local expression replacer %texts% with %texts% in %text%:
+	return type: text
+	get:
+		set {_result} to expr-3
+		loop exprs-1:
+			add 1 to {_n}
+			replace all "%loop-value-1%" with ({_n}th element of exprs-2 ? "") in {_result}
+		return {_result}			
+
+on load:
+	loop currently loaded yaml files:
+		loop-value contains "leaf.dbd.config"
+		unload yaml loop-value-1
+	load yaml "plugins/DeadByDeadlight/config.yml" as "leaf.dbd.config"	
+	check_yaml("config", "Settings.Chat-Format", "&7{player} &8» &7{message}")							
+	check_yaml("config", "Settings.Items.Leave.Item", "magma cream")		
+	check_yaml("config", "Settings.Items.Leave.Name", "&cLeave the game")	
+	check_yaml("config", "Settings.Items.Leave.Slot", "8", "number")					
+	check_yaml("config", "Settings.Timers.In-Lobby", "30", "number")		
+	check_yaml("config", "Settings.Misc.Disable-Names", "true", "boolean")		
+	check_yaml("config", "Settings.Misc.Hook.Radius", "5", "number")
+	check_yaml("config", "Settings.Misc.Hook.Target", "100", "number")	
+	check_yaml("config", "Settings.Misc.Hook.DeathTarget", "1000", "number")	
+	check_yaml("config", "Settings.Misc.Grab.Target", "100", "number")		
+	check_yaml("config", "Settings.Misc.Generator.Radius", "4", "number")			
+	check_yaml("config", "Settings.Misc.Generator.Target", "1000", "number")	
+	check_yaml("config", "Settings.Misc.Generator.Holo", "&cGenerator ##{id}||&cStatus: {status}", "list")		
+	check_yaml("config", "Settings.Misc.Action-Bar.Starting-Repairing", "&aStarting repairing generator...")	
+	check_yaml("config", "Settings.Misc.Action-Bar.Starting-Hooking", "&cHooking player...")	
+	check_yaml("config", "Settings.Misc.Action-Bar.Starting-Grab", "&cGrabbing player...")		
+	check_yaml("config", "Settings.Misc.Action-Bar.Saving-Player", "&aSaving player...")	
+	check_yaml("config", "Settings.Misc.Damage.Delay", "2 seconds")			
+	check_yaml("config", "Settings.Misc.Escape.Radius", "5", "number")	
+	check_yaml("config", "Settings.Misc.HeartBeat.Enabled", "true", "boolean")	
+	check_yaml("config", "Settings.Misc.HeartBeat.Radius", "12", "number")		
+	check_yaml("config", "Settings.Misc.Disable-Hunter-Chat", "true", "boolean")		
+	check_yaml("config", "Settings.Misc.Player-Health", "4", "number")		
+	check_yaml("config", "Menus.Arena-Browser.Menu", "&8&l» &7DeadByDeadlight Arenas")	
+	check_yaml("config", "Menus.Arena-Browser.Name", "&8» &7Arena: &e{arena}")	
+	check_yaml("config", "Menus.Arena-Browser.Lore", "&8▪ &7Status: &e{status}||&8▪ &7Playing: &e{playing}", "list")
+	check_yaml("config", "Menus.Arena-Browser.AutoJoin.Name", "&8▪ &eAutoJoin &8▪")	
+	check_yaml("config", "Menus.Arena-Browser.AutoJoin.Item", "beacon")		
+	check_yaml("config", "Menus.Stats.Menu", "&8&l» &7DeadByDeadlight Stats")	
+	check_yaml("config", "Menus.Stats.Hunter.Name", "&cHunter Stats")	
+	check_yaml("config", "Menus.Stats.Hunter.Lore", "&8» &7Killed Players &a{KilledPlayers}||&8» &7Hooked Players &a{HookedPlayers}||&8» &7Knocked Players &a{KnockedPlayers}", "list")	
+	check_yaml("config", "Menus.Stats.Survivor.Name", "&aSurvivor Stats")		
+	check_yaml("config", "Menus.Stats.Survivor.Lore", "&8» &7Freed Players &a{FreedPlayers}||&8» &7Escapes &a{Escapes}||&8» &7Generator Repaired &a{GeneratorRepaired}", "list")				
+	check_yaml("config", "Menus.Generator.Menu", "&8&l» &7Repairing generator")
+	check_yaml("config", "Scoreboard.Waiting.Name", "&eDead By Deadlight")	
+	check_yaml("config", "Scoreboard.Waiting.Lines", "&7{now}||||&8♦ &fArena: &a{arena}||||&8♦ &fPlayers: &a{players}||||&8♦ &fStarting In: &a{timer}||||&b㋡ &e&nMC.SERVER.NET&r &b㋡", "list")
+	check_yaml("config", "Scoreboard.Game.Hunter.Name", "&eDead By Deadlight") 
+	check_yaml("config", "Scoreboard.Game.Hunter.Role", "&cHunter")	
+	check_yaml("config", "Scoreboard.Game.Hunter.Lines", "&7{now}||&8➭ &fObjectives:||||&8▪ &fKill The Survivors:  {SurvivorsStatus}||||&8➭ &fInfo:||||&8▪ &fRole: &e{role}||&8▪ &fSurvivors Left:  &e{players-left}||&8▪ &fSurvivors Knocked: &c{players-knocked}||&8▪ &fSurvivors In Hook: &c{players-in-hook}||||&eplay.my-cool-server.net", "list")
+	check_yaml("config", "Scoreboard.Game.Survivor.Name", "&eDead By Deadlight")
+	check_yaml("config", "Scoreboard.Game.Survivor.Role", "&aSurvivor")		
+	check_yaml("config", "Scoreboard.Game.Survivor.Lines", "&7{now}||&8➭ &fObjectives:||||&8▪ &fRepair Generators:  &e{fixed-generators}/{total-generators} {GeneratorsStatus}||&8▪ &fEscape:  &e{EscapeStatus}||||&8➭ &fInfo:||||&8▪ &fRole: &e{role}||&8▪ &fHealth: &c❤ &e{health}||&8▪ &fSurvivors Left:  &e{players-left}||&8▪ &fSurvivors In Hook: &c{players-in-hook}||&8▪ &fSurvivors In Knocked: &c{players-knocked}||||&eplay.my-cool-server.net", "list")
+	check_yaml("config", "Sounds.Generator.Fail", "EXPLODE")	
+	check_yaml("config", "Sounds.Generator.Fixed", "LEVEL_UP")	
+	check_yaml("config", "Sounds.Generator.Knock", "VILLAGER_DEATH")		
+	check_yaml("config", "Sounds.Generator.Repair", "ANVIL_USE")	
+	check_yaml("config", "Sounds.Generator.Menu-Success", "LEVEL_UP")	
+	check_yaml("config", "Sounds.Generator.HeartBeat", "NOTE_BASS")	
+	check_yaml("config", "Messages.Join", "&7{player} &ehas joined to the game.")	
+	check_yaml("config", "Messages.Leave", "&7{player} &eleft the game.")
+	check_yaml("config", "Messages.Death", "&c➜ &e{victim} &7died")	
+	check_yaml("config", "Messages.Hook", "&c➜ &e{victim} &7is now in the hook, He's {distance}m away")		
+	check_yaml("config", "Messages.Knock", "&c➜ &e{victim} &7has been knocked, He's {distance}m away")	
+	check_yaml("config", "Messages.Escape", "&e➜ &e{player} &7has escaped!")		
+	check_yaml("config", "Messages.Starting", "&eThe game starts in &a{seconds} &eseconds")	
+	check_yaml("config", "Messages.Start.Survivor", "||||&e✦ &7Dead By Deadlight &e✦||||&7You are a &e{role} &7your role is to ||&7repair the generators then escape.||&7Use the &cshift key &7to repair generators||&7and revive the other players||||", "list")
+	check_yaml("config", "Messages.Start.Hunter", "||||&e✦ &7Dead By Deadlight &e✦||||&7You are &e{role} &7your role is to ||&7stop the survivors from escaping.||&7Use &cshift key &7to grab and put them in hook.||||", "list")	
+	check_yaml("config", "Messages.Summary.Survivor", "||||&e✦ &7Dead By Deadlight &e✦||||&aYou &7- &e{player}||&8- &e{role} &8-||&8- &e{status} &8-||||&aGame Results...||||&8▪ &7Freed players &a{freed-players}||&8▪ &7Generator Contribution &a{generator-stats}||||", "list")			
+	check_yaml("config", "Messages.Summary.Hunter", "||||&e✦ &7Dead By Deadlight &e✦||||&aYou &7- &e{player}||&8- &e{role} &8-||&8- &e{status} &8-||||&aGame Results...||||&8▪ &7Killed players &a{killed-players}||&8▪ &7Hooked players &a{hooked-players}||&8▪ &7Knocked players &a{knocked-players}||||", "list")		
+	save yaml "leaf.dbd.config"
+
+
+command dbd [<text = help>] [<text>] [<text>] [<number>]:
+	aliases: dbd
+	executable by: players
+	trigger:
+		if arg-1 is "help":
+			if player has permission "dbd.player":
+				send centered "&7☁☁☁☁☁☁☁☁☁☁☁☁☁☁☁☁☁☁☁☁" to player
+				send "&a/dbd list"
+				send "&a/dbd join &8(&7arena_name&8)"
+				send "&a/dbd parachute"				
+				send "&a/dbd autojoin"
+				send "&a/dbd leave"
+				send centered "&7☁☁☁☁☁☁☁☁☁☁☁☁☁☁☁☁☁☁☁☁" to player
+			if player has permission "dbd.admin":	
+				send centered "&7☁☁☁☁☁☁☁☁☁☁☁☁☁☁☁☁☁☁☁☁" to player	
+				send "&e/dbd start"			
+				send "&e/dbd setHunter &8(&7player_name&8)"		
+				send centered "&7☁☁☁☁☁☁☁☁☁☁☁☁☁☁☁☁☁☁☁☁" to player								
+				send "&c/dbd setlobby"				
+				send "&c/dbd createArena &8(&7arena_name&8)"			
+				send "&c/dbd setArenaLobby &8(&7arena_name&8)"
+				send "&c/dbd setMinPlayers &8(&7arena_name&8) &8(&7number&8)"
+				send "&c/dbd setMaxPlayers &8(&7arena_name&8) &8(&7number&8)"	
+				send "&c/dbd setGatePos1 &8(&7arena_name&8)"						
+				send "&c/dbd setGatePos2 &8(&7arena_name&8)"	
+				send "&c/dbd setSurvivorSpawn &8(&7arena_name&8)"	
+				send "&c/dbd setSurvivorEscape &8(&7arena_name&8)"		
+				send "&c/dbd addGenerator &8(&7arena_name&8)"	
+				send "&c/dbd removeGenerator &8(&7arena_name&8)"	
+				send "&c/dbd addHook &8(&7arena_name&8)"	
+				send "&c/dbd removeHook &8(&7arena_name&8)"																																	
+				send "&c/dbd saveArena &8(&7arena_name&8)"							
+				send "&c/dbd deleteArena &8(&7arena_name&8)"
+				send centered "&7☁☁☁☁☁☁☁☁☁☁☁☁☁☁☁☁☁☁☁☁" to player
+				stop
+		if arg-1 is "join":		
+			dbd_join(player, arg-2)
+		if arg-1 is "list":		
+			if {-dbd::cache::player::%player%::state} is not set:	
+				open chest inventory with 6 rows named yaml value "Menus.Arena-Browser.Menu" from "leaf.dbd.config" to player
+				wait a tick	
+				set {_slot} to 10						
+				loop {dbd::arenas::*}:
+					set {_item} to green clay named replacer "{arena}" with loop-value-1 in yaml value "Menus.Arena-Browser.Name" from "leaf.dbd.config"
+					set {_lore::*} to yaml list "Menus.Arena-Browser.Lore" from "leaf.dbd.config"
+					replace all "{status}" with "%{-dbd::arena::%loop-value%::cache::status}%" in {_lore::*}
+					replace all "{playing}" with "%size of {-dbd::arena::%loop-value%::cache::ninjas::*}%" in {_lore::*}																	
+					make a gui slot {_slot} of player with {_item} with leaf lore {_lore::*} to run function dbd_join(player, loop-value-1)
+					add 1 to {_slot}
+					if {_slot} is 17 or 26 or 35:
+						add 2 to {_slot}
+				make a gui slot 49 of player with yaml value "Menus.Arena-Browser.AutoJoin.Item" from "leaf.dbd.config" parsed as material named yaml value "Menus.Arena-Browser.AutoJoin.Name" from "leaf.dbd.config" to run:
+					make player execute command "dbd autojoin"					
+		if arg-1 is "stats":		
+			if {-dbd::cache::player::%player%::state} is not set:	
+				open chest inventory with 1 rows named yaml value "Menus.Stats.Menu" from "leaf.dbd.config" to player
+				wait a tick						
+				loop "Hunter" and "Survivor":					
+					set {_lore::*} to yaml list "Menus.Stats.%loop-value-1%.Lore" from "leaf.dbd.config"
+					loop "FreedPlayers", "KilledPlayers", "HookedPlayers", "KnockedPlayers", "Escapes" and "GeneratorRepaired":
+						set {_int} to yaml value "Stats.%loop-value-2%" from "leaf.dbd.playerdata.%uuid of player%"
+						replace all "{%loop-value-2%}" with "%{_int}%" in {_lore::*}
+					if loop-value-1 = "Survivor":
+						make a gui slot 2 of player with skull of player named yaml value "Menus.Stats.%loop-value-1%.Name" from "leaf.dbd.config" with leaf lore {_lore::*} to do nothing						
+					if loop-value-1 = "Hunter":
+						make a gui slot 6 of player with {-dbd::cache::Heads::Hunter} named yaml value "Menus.Stats.%loop-value-1%.Name" from "leaf.dbd.config" with leaf lore {_lore::*} to do nothing							
+		if arg-1 is "leave":	
+			dbd_leave(player)
+		if arg-1 is "autojoin":		
+			if {-dbd::cache::player::%player%::state} is not set:
+				loop {dbd::arenas::*}:
+					if {-dbd::arena::%loop-value%::cache::status} is "WAITING" or "STARTING":
+						dbd_join(player, loop-value)
+						stop
+		if arg-1 is "createarena":	
+			if player has permission "dbd.admin":		
+				if arg-2 is set:
+					if {dbd::arena::%arg-2%::state} is not set:
+						set {dbd::arena::%arg-2%::state} to "created"
+						set {-dbd::cache::player::setup} to arg-2
+						send "&aArena &c%arg-2% &ahas been created!"
+					else:
+						send "&aThis arena already exists!"	
+				else:
+					send "&aSpecify Arena!"		
+		if arg-1 is "setGatePos1":
+			if player has permission "dbd.admin":		
+				if {dbd::arena::%arg-2%::state} is "created" or "ready":
+					set {dbd::arena::%arg-2%::Gate::Pos1} to location of target block
+					send "&aGate Pos1 &asetted to &3%target block% &afor Arena &3%arg-2% &ahas been set!"						
+				else:
+					send "&aThis arena not exists"	
+		if arg-1 is "setGatePos2":
+			if player has permission "dbd.admin":		
+				if {dbd::arena::%arg-2%::state} is "created" or "ready":
+					set {dbd::arena::%arg-2%::Gate::Pos2} to location of target block
+					send "&aGate Pos2 &asetted to &3%target block% &afor Arena &3%arg-2% &ahas been set!"						
+				else:
+					send "&aThis arena not exists"								
+		if arg-1 is "addhook":
+			if player has permission "dbd.admin":		
+				if {dbd::arena::%arg-2%::state} is "created" or "ready":
+					set {_id} to size of {dbd::arena::%arg-2%::hook::*} + 1
+					set {dbd::arena::%arg-2%::hook::%{_id}%} to location of target block
+					set yaw of {dbd::arena::%arg-2%::hook::%{_id}%} to yaw of player
+					send "&aHook with id &3%{_id}% &asetted to &3%target block% &afor Arena &3%arg-2% &ahas been set!"						
+				else:
+					send "&aThis arena not exists"		
+		if arg-1 is "removehook":
+			if player has permission "dbd.admin":		
+				if {dbd::arena::%arg-2%::state} is "created" or "ready":
+					loop {dbd::arena::%arg-2%::hook::*}:
+						if distance between {dbd::arena::%arg-2%::hook::%loop-index%} and player < 3:
+							delete {dbd::arena::%arg-2%::hook::%loop-index%}
+							remove loop-value-1 from {dbd::arena::%arg-2%::hook::*}
+							send "&aHook with id &3%loop-value-1% &afor Arena &3%arg-2% &ahas been deleted!"	
+							stop					
+				else:
+					send "&aThis arena not exists"	
+		if arg-1 is "addgenerator":
+			if player has permission "dbd.admin":		
+				if {dbd::arena::%arg-2%::state} is "created" or "ready":
+					set {_id} to size of {dbd::arena::%arg-2%::generator::*} + 1
+					set {dbd::arena::%arg-2%::generator::%{_id}%} to location of player
+					dbd_update_generator_holo(arg-2, {_id})
+					send "&aGenerator with id %{_id}% for Arena &3%arg-2% &ahas been set!"						
+				else:
+					send "&aThis arena not exists"		
+		if arg-1 is "removegenerator":
+			if player has permission "dbd.admin":		
+				if {dbd::arena::%arg-2%::state} is "created" or "ready":
+					loop {dbd::arena::%arg-2%::generator::*}:
+						if distance between {dbd::arena::%arg-2%::generator::%loop-index%} and player < 1:
+							delete {dbd::arena::%arg-2%::generator::%loop-index%}
+							loop all entities in radius 1 of {_loc}:
+								loop-entity = armor stand
+								clear loop-entity
+							send "&aGenerator with id %loop-value-1% for Arena &3%arg-2% &ahas been deleted!"	
+							stop					
+				else:
+					send "&aThis arena not exists"															
+		if arg-1 is "sethunterSpawn":
+			if player has permission "dbd.admin":		
+				if {dbd::arena::%arg-2%::state} is "created" or "ready":
+					set {dbd::arena::%arg-2%::hunterSpawn} to location of player
+					send "&aHunter Spawn for Arena &3%arg-2% &ahas been set!"						
+				else:
+					send "&aThis arena not exists"							
+		if arg-1 is "setsurvivorSpawn":
+			if player has permission "dbd.admin":		
+				if {dbd::arena::%arg-2%::state} is "created" or "ready":
+					set {dbd::arena::%arg-2%::survivorSpawn} to location of player
+					send "&aSurvivor Spawn for Arena &3%arg-2% &ahas been set!"						
+				else:
+					send "&aThis arena not exists"		
+		if arg-1 is "setsurvivorEscape":
+			if player has permission "dbd.admin":		
+				if {dbd::arena::%arg-2%::state} is "created" or "ready":
+					set {dbd::arena::%arg-2%::survivorEscape} to location of player
+					send "&aSurvivor Escape for Arena &3%arg-2% &ahas been set!"						
+				else:
+					send "&aThis arena not exists"																				
+		if arg-1 is "setarenalobby":
+			if player has permission "dbd.admin":		
+				if {dbd::arena::%arg-2%::state} is "created" or "ready":
+					set {dbd::arena::%arg-2%::lobby} to location of player
+					send "&aLobby for Arena &3%arg-2% &ahas been set!"						
+				else:
+					send "&aThis arena not exists"		
+		if arg-1 is "setmaxplayers" or "setminplayers":
+			if player has permission "dbd.admin":		
+				if {dbd::arena::%arg-2%::state} is "created" or "ready":
+					set {_type} to arg-1
+					replace all "set" with "" in {_type}
+					set {dbd::arena::%arg-2%::%{_type}%} to arg-3 parsed as number
+					replace all "maxplayers" with "Max Players" in {_type}
+					replace all "minplayers" with "Min Players" in {_type}
+					send "&a%{_type}% for Arena &3%arg-2% &ahas been set!"						
+				else:
+					send "&aThis arena not exists"																
+		if arg-1 is "setlobby":	
+			if player has permission "dbd.admin":
+				set {dbd::lobby} to location of player
+				send "&aLobby set."	
+		if arg-1 is "sethunter":
+			if player has permission "dbd.admin":
+				arg-2 parsed as player is set
+				if {-dbd::arena::%{-dbd::cache::player::%arg-2%::arena}%::cache::status} is "WAITING" or "STARTING":
+					set {-dbd::cache::player::%arg-2%::role} to "Hunter"
+					set {-dbd::arena::%{-dbd::cache::player::%arg-2%::arena}%::cache::selectedHunter} to true
+					send "&7%arg-2% Will be &cHunter&7 when the game starts."																								
+		if arg-1 is "start":
+			if player has permission "dbd.admin":
+				if {-dbd::arena::%{-dbd::cache::player::%player%::arena}%::cache::status} is "WAITING" or "STARTING":
+					dbd_start({-dbd::cache::player::%player%::arena})
+		if arg-1 is "reload":		
+			if player has permission "dbd.admin":
+				broadcast "&aReloading..."
+				wait a tick
+				make console execute command "sk reload %script%"
+		if arg-1 is "savearena":	
+			if player has permission "dbd.admin":		
+				if {dbd::arena::%arg-2%::state} is "created":
+					if {dbd::arena::%arg-2%::lobby} is set:								
+						if {dbd::arena::%arg-2%::maxplayers} is set:	
+							if {dbd::arena::%arg-2%::minplayers} is set:	
+								if {dbd::arena::%arg-2%::hunterSpawn} is set:
+									if {dbd::arena::%arg-2%::survivorSpawn} is set:
+										if {dbd::arena::%arg-2%::survivorEscape} is set:
+											if {dbd::arena::%arg-2%::generator::*} is set:
+												if {dbd::arena::%arg-2%::hook::*} is set:
+													if {dbd::arena::%arg-2%::Gate::Pos1} is set:
+														if {dbd::arena::%arg-2%::Gate::Pos2} is set:
+															set {dbd::arena::%arg-2%::state} to "ready"
+															add arg-2 to {dbd::arenas::*}
+															send "&aArena &c%arg-2% &ahas been saved."
+															dbd_resetarena(arg-2)
+														else:
+															send "&aGate pos2 is not set!"																	
+													else:
+														send "&aGate pos1 is not set!"																
+												else:
+													send "&aYou need to add some hooks!"													
+											else:
+												send "&aYou need to add some generators!"														
+										else:
+											send "&aEscape location is not set!"												
+									else:
+										send "&aSurvivor spawn is not set!"												
+								else:
+									send "&aHunter spawn is not set!"											
+							else:
+								send "&aMin players not set!"												
+						else:
+							send "&aMax players not set!"																																				
+					else:
+						send "&aLobby is not set!"						
+				else:
+					send "&aThis arena not exists"
+		if arg-1 is "debug":	
+			if player has permission "dbd.admin":
+				send "&fArena: &a%{-dbd::cache::player::%player%::arena}%"	
+				send "&fStatus: &a%{-dbd::arena::%{-dbd::cache::player::%player%::arena}%::cache::status}%"	
+				send "&fPlayers: &a%size of {-dbd::arena::%{-dbd::cache::player::%player%::arena}%::cache::ninjas::*}%"		
+		if arg-1 is "deletearena":	
+			if player has permission "dbd.admin":		
+				if {dbd::arena::%arg-2%::state} is set:
+					dbd_resetarena(arg-2)
+					delete {dbd::arena::%arg-2%::*}							
+					remove arg-2 from {dbd::arenas::*}
+					send "&aArena &c%arg-2% &ahas been deleted."
+				else:
+					send "&aThis arena not exists"
+	
+function dbd_send_start(p: player):
+	loop yaml list "Messages.Start.%{-dbd::cache::player::%{_p}%::role}%" from "leaf.dbd.config":
+		set {_msg} to loop-value-1
+		replace all "{player}" with "%{_p}%" in {_msg}		
+		replace all "{role}" with yaml value "Scoreboard.Game.%{-dbd::cache::player::%{_p}%::role}%.Role" from "leaf.dbd.config" in {_msg}											
+		send message centered colored {_msg} to {_p}
+
+function dbd_send_summary(p: player, arena: text):
+	loop yaml list "Messages.Summary.%{-dbd::cache::player::%{_p}%::role}%" from "leaf.dbd.config":
+		set {_msg} to loop-value-1
+		replace all "{player}" with "%{_p}%" in {_msg}
+		replace all "{freed-players}" with "%{-dbd::cache::player::%{_p}%::GameStats::FreedPlayers}%" in {_msg}
+		replace all "{generator-stats}" with "%{-dbd::cache::player::%{_p}%::GameStats::Generator}%" in {_msg}
+		replace all "{hooked-players}" with "%{-dbd::cache::player::%{_p}%::GameStats::HookedPlayers}%" in {_msg}	
+		replace all "{knocked-players}" with "%{-dbd::cache::player::%{_p}%::GameStats::KockedPlayers}%" in {_msg}			
+		replace all "{role}" with yaml value "Scoreboard.Game.%{-dbd::cache::player::%{_p}%::role}%.Role" from "leaf.dbd.config" in {_msg}	
+		replace all "{killed-players}" with "%{-dbd::cache::player::%{_p}%::GameStats::KilledPlayers}%" in {_msg}			
+		if {-dbd::cache::player::%{_p}%::role} = "Survivor":		
+			if {-dbd::cache::player::%{_p}%::GameStats::Escaped} is set:	
+				replace all "{status}" with "&aEscaped" in {_msg}	
+			else:
+				replace all "{status}" with "&cFailed to Escape" in {_msg}	
+		if {-dbd::cache::player::%{_p}%::role} = "Hunter":
+			if {-dbd::cache::player::%{_p}%::GameStats::EscapedStopped} is set:	
+				replace all "{status}" with "&aYou stopped players from escaping" in {_msg}	
+			else:
+				replace all "{status}" with "&cFailed to stop players from escaping" in {_msg}											
+		send message centered colored {_msg} to {_p}
+
+function dbd_gate(arena: text, type: text):
+	if {_type} = "open":
+		loop blocks within {dbd::arena::%{_arena}%::Gate::Pos1} to {dbd::arena::%{_arena}%::Gate::Pos2}:
+			set {dbd::arena::%{_arena}%::GateBlocks::Type::%location of loop-block%} to type of loop-block
+			set {dbd::arena::%{_arena}%::GateBlocks::Location::%location of loop-block%} to location of loop-block
+			set loop-block to air
+	if {_type} = "close":
+		loop blocks within {dbd::arena::%{_arena}%::Gate::Pos1} to {dbd::arena::%{_arena}%::Gate::Pos2}:
+			set block at {dbd::arena::%{_arena}%::GateBlocks::Location::%location of loop-block%} to {dbd::arena::%{_arena}%::GateBlocks::Type::%location of loop-block%}
+		delete {dbd::arena::%{_arena}%::GateBlocks::*}
+
+on load:
+	delete {-dbd::cache::*}
+	send "&7&l--------------------------------------------" to console
+	send " " to console
+	send "&aLoading &ev.{@plugin-version}&a..." to console
+	broadcast "&aDeadByDeadlight loaded!"
+	send " " to console
+	send "&7&l--------------------------------------------" to console
+	loop {dbd::arenas::*}:		
+		delete {-dbd::arena::%loop-value-1%::cache::ninjas::*}
+		dbd_resetarena(loop-value-1)		
+	set {-dbd::cache::TitleManager} to Bukkit.getServer().getPluginManager().getPlugin("TitleManager")	
+	set {-dbd::cache::Heads::Hunter} to player head with custom nbt "{Unbreakable:1,HideFlags:4,SkullOwner:{Id:""a0fd7e20-22e1-4426-bbbe-1848931f9948"",Properties:{textures:[{Value:""eyJ0ZXh0dXJlcyI6eyJTS0lOIjp7InVybCI6Imh0dHA6Ly90ZXh0dXJlcy5taW5lY3JhZnQubmV0L3RleHR1cmUvZWM3Nzg1NThiM2U4NThhOTJlM2EzMTk3MWQ5NWViNDMxNmZiODY4OTgyYzBmMzgwYWFhMzhiNjkwY2M0MWNlOCJ9fX0=""}]}}}"
+	set {-dbd::cache::Damage.Delay} to yaml value "Settings.Misc.Damage.Delay" from "leaf.dbd.config" parsed as timespan
+	if {dbd::lobby} is not set:
+		broadcast "&cDead By Deadlight lobby is not set!."
+	set {-dbd::cache::Items::Leave} to yaml value "Settings.Items.Leave.Item" from "leaf.dbd.config" parsed as material named yaml value "Settings.Items.Leave.Name" from "leaf.dbd.config"
+
+on unload:
+	send "&7&l--------------------------------------------" to console
+	send " " to console
+	send "&aDisabling &ev.{@plugin-version}&a..." to console
+	send "&ev.{@plugin-version} &adisabled!" to console
+	send " " to console
+	send "&7&l--------------------------------------------" to console
+
+function dbd_stats(p: player, do: text, type: text = "Survivor"):
+	if yaml "leaf.dbd.playerdata.%uuid of {_p}%" is not loaded:
+		load yaml "plugins/DeadByDeadlight/playerdata/%uuid of {_p}%.yml" as "leaf.dbd.playerdata.%uuid of {_p}%"	
+	{_do} is "check":
+		loop "FreedPlayers", "KilledPlayers", "HookedPlayers", "KnockedPlayers", "Escapes" and "GeneratorRepaired":
+			if yaml value "Stats.%loop-value-1%" from "leaf.dbd.playerdata.%uuid of {_p}%" is not set:
+				set yaml value "Stats.%loop-value-1%" from "leaf.dbd.playerdata.%uuid of {_p}%" to 0
+	{_do} is "add":
+		set yaml value "Stats.%{_type}%" from "leaf.dbd.playerdata.%uuid of {_p}%" to yaml value "Stats.%{_type}%" from "leaf.dbd.playerdata.%uuid of {_p}%" + 1
+	save yaml "leaf.dbd.playerdata.%uuid of {_p}%"
+	
+function dbd_no_name(p: player, type: boolean):
+	set {_sb} to Bukkit.getScoreboardManager().getMainScoreboard()
+	if {_type} = false:
+		if {_sb}.getPlayerTeam({_p}) is set:
+			{_sb}.getPlayerTeam({_p}).unregister()
+		stop
+	set {_team} to {_sb}.getPlayerTeam({_p})
+	if {_team} != null:
+		set {_team} to {_sb}.getTeam({_p}.getName())
+		if {_team} is not set:
+			set {_team} to {_sb}.registerNewTeam({_p}.getName())
+			{_team}.addPlayer({_p})
+	if {-dbd::cache::player::%{_p}%::role} = "Hunter":
+		{_team}.setPrefix("&c&k")
+	else:
+		{_team}.setPrefix("&8&k")
+
+function dbd_spawn_hook(loc: location):
+	loop all spiders in radius 1 of {_loc}:
+		clear loop-entity
+	set pitch of {_loc} to 60
+	spawn an spider at {_loc}
+	set {_s} to spawned spider
+	add "{NoAI:1b}" to nbt of {_s}	
+	add "{Silent:1}" to nbt of {_s}		
+	add "{NoGravity:1b}" to nbt of {_s}
+	set metadata value "DBD_GAME" of {_s} to true
+	
+function dbd_heartbeat(p: player):
+	while {-dbd::cache::player::%{_p}%::state} is "IN-GAME":
+		loop all players in radius yaml value "Settings.Misc.HeartBeat.Radius" from "leaf.dbd.config" of {_p}:
+			if {-dbd::cache::player::%loop-value-1%::role} = "Survivor":
+				set {_distance} to rounded distance between {_p} and loop-player
+				if {_distance} = 0:
+					set {_distance} to 1
+				set {_v} to 0.1 + "0.%10 - {_distance}%" parsed as number
+				loop-player.playSound(location of loop-player, Sound..yaml value "Sounds.Generator.HeartBeat" from "leaf.dbd.config", {_v} and 1)
+		wait a second
+
+function dbd_leave(p: player, quit: boolean = true):
+	if {-dbd::cache::player::%{_p}%::state} is set:
+		if {-dbd::cache::player::%{_p}%::state} is "IN-GAME":
+			set {_arena} to {-dbd::cache::player::%{_p}%::arena}		
+			if {-dbd::cache::player::%{_p}%::CurrenHook} is set:			
+				delete {-dbd::arena::%{_arena}%::cache::OccupiedHook::%{-dbd::cache::player::%{_p}%::CurrenHook}%}
+				delete {-dbd::cache::player::%{_p}%::CurrenHook}		
+			remove {_p} from {-dbd::arena::%{_arena}%::cache::ninjas::*}
+			if size of {-dbd::arena::%{_arena}%::cache::ninjas::*} = 0 or 1:
+				if {-dbd::arena::%{_arena}%::cache::status} is not "RESTARTING":
+					dbd_resetarena({_arena})
+			if {_quit} is true:
+				send replacer "{player}" with {_p}'s display name in yaml value "Messages.Leave" from "leaf.dbd.config" to {-dbd::arena::%{-dbd::cache::player::%{_p}%::arena}%::cache::ninjas::*}	
+			if {-dbd::cache::player::%{_p}%::role} = "Hunter":
+				dbd_resetarena({_arena})
+		dbd_no_name({_p}, false)		
+		delete {-dbd::cache::player::%{_p}%::*}	
+		dbd_clear_player({_p})
+		delete scoreboard of {_p}
+		teleport {_p} to {dbd::lobby}		
+		
+function dbd_join(p: player, arena: text):	
+	if {-dbd::cache::player::%{_p}%::state} is not set:
+		if {dbd::arena::%{_arena}%::state} is "ready":
+			if {-dbd::arena::%{_arena}%::cache::status} is "WAITING" or "STARTING":
+				if size of {-dbd::arena::%{_arena}%::cache::ninjas::*} < {dbd::arena::%{_arena}%::maxplayers}:
+					dbd_clear_player({_p})
+					set {-dbd::cache::player::%{_p}%::state} to "IN-GAME"
+					set {-dbd::cache::player::%{_p}%::arena} to {_arena}
+					teleport {_p} to {dbd::arena::%{_arena}%::lobby}
+					dbd_createBoard({_p}, "DBD-WAITING")					
+					set slot yaml value "Settings.Items.Leave.Slot" from "leaf.dbd.config" of {_p} to {-dbd::cache::Items::Leave}
+					add {_p} to {-dbd::arena::%{_arena}%::cache::ninjas::*}		
+					if size of {-dbd::arena::%{_arena}%::cache::ninjas::*} = {dbd::arena::%{_arena}%::minplayers}:
+						dbd_start_countdown({_arena})											
+					send replacer "{player}" and "{players-count}" with {_p}'s display name and "%size of {-dbd::arena::%{_arena}%::cache::ninjas::*}%" in yaml value "Messages.Join" from "leaf.dbd.config" to {-dbd::arena::%{_arena}%::cache::ninjas::*}
+				else:
+					send "&7This arena is full" to {_p}
+			else:
+				send "&7This game is running" to {_p}
+		else:
+			send "&7This arena not exists" to {_p}
+	else:
+		send "&7You are already playing." to {_p}
+
+
+function dbd_update_generator_holo(arena: text, generator: text):
+	set {_loc} to {dbd::arena::%{_arena}%::generator::%{_generator}%}
+	add 1 to y-coords of {_loc}
+	set {_holo::*} to yaml list "Settings.Misc.Generator.Holo" from "leaf.dbd.config"
+	replace all "{id}" with "%{_generator}%" in {_holo::*}
+	if {-dbd::arena::%{_arena}%::cache::generator::state::status::%{_generator}%} is "Fixed":
+		replace all "{status}" with "&a✔" in {_holo::*}
+	else:
+		replace all "{status}" with "&c✘" in {_holo::*}
+	leaf create hologram at {_loc} named {_holo::*}	
+
+function dbd_start(arena: text):
+	set {-dbd::arena::%{_arena}%::cache::status} to "IN-GAME"
+	if {-dbd::arena::%{_arena}%::cache::selectedHunter} is not set:
+		set {_r} to a random element out of {-dbd::arena::%{_arena}%::cache::ninjas::*}		
+		set {-dbd::cache::player::%{_r}%::role} to "Hunter"
+	set {-dbd::arena::%{_arena}%::cache::SurvivorsStatus} to "&c✘"	
+	set {-dbd::arena::%{_arena}%::cache::escape::status::ALL} to "&c✘"		
+	set {-dbd::arena::%{_arena}%::cache::generator::status::ALL} to "&c✘"		
+	loop {-dbd::arena::%{_arena}%::cache::ninjas::*}:
+		dbd_clear_player(loop-value-1)
+		if {-dbd::cache::player::%loop-value-1%::role} is not set:
+			set {-dbd::cache::player::%loop-value-1%::role} to "Survivor"
+		apply blindness without any particles to loop-value-1 for 3 seconds	
+		if {-dbd::cache::player::%loop-value-1%::role} = "Hunter":
+			teleport loop-value-1 to {dbd::arena::%{_arena}%::hunterSpawn}
+			set loop-value-1's helmet to {-dbd::cache::Heads::Hunter}
+			set slot 0 of loop-value-1 to stone axe with custom nbt "{Unbreakable:1,HideFlags:4}"
+			apply mining fatigue without any particles to loop-value-1 for 999 days
+			set {-dbd::cache::player::%loop-value-1%::GameStats::HookedPlayers} to 0
+			set {-dbd::cache::player::%loop-value-1%::GameStats::KilledPlayers} to 0	
+			set {-dbd::cache::player::%loop-value-1%::GameStats::KockedPlayers} to 0
+			set {-dbd::arena::%{_arena}%::cache::hunter} to loop-value-1
+			if yaml value "Settings.Misc.HeartBeat.Enabled" from "leaf.dbd.config" is true:
+				dbd_heartbeat(loop-value-1)
+		if {-dbd::cache::player::%loop-value-1%::role} = "Survivor":
+			teleport loop-value-1 to {dbd::arena::%{_arena}%::survivorSpawn}
+			set {-dbd::cache::player::%loop-value-1%::damageState} to yaml value "Settings.Misc.Player-Health" from "leaf.dbd.config"
+			set {-dbd::cache::player::%loop-value-1%::GameStats::FreedPlayers} to 0
+			set {-dbd::cache::player::%loop-value-1%::GameStats::Generator} to 0
+			set {-dbd::cache::player::%loop-value-1%::GameStats::HookedPlayers} to 0			
+		if yaml value "Settings.Misc.Disable-Names" from "leaf.dbd.config" is true:
+			loop-value-1.setPlayerListName(null)
+			dbd_no_name(loop-value-1, true)	
+		dbd_createBoard(loop-value-1, "DBD-GAME")	
+		dbd_send_start(loop-value-1)
+	loop {dbd::arena::%{_arena}%::hook::*}:
+		dbd_spawn_hook(loop-value-1)
+	loop {dbd::arena::%{_arena}%::generator::*}:
+		set {-dbd::arena::%{_arena}%::cache::generator::state::repair::%loop-index-1%} to 0
+		set {-dbd::arena::%{_arena}%::cache::generator::state::status::%loop-index-1%} to "Broken"	
+		dbd_update_generator_holo({_arena}, loop-index-1)
+
+function dbd_getPlayers(arena: text, type: text) :: number:
+	loop {-dbd::arena::%{_arena}%::cache::ninjas::*}:
+		if {-dbd::cache::player::%loop-value%::role} = "Survivor":
+			if {-dbd::cache::player::%loop-value%::playingState} = "Hanging":
+				add 1 to {_amount.Hanging}
+			if {-dbd::cache::player::%loop-value%::playingState} = "Laying":
+				add 1 to {_amount.Laying}	
+			if {-dbd::cache::player::%loop-value%::playingState} is not set:	
+				add 1 to {_amount.Alive}	
+	if {_amount.%{_type}%} is set:
+		return {_amount.%{_type}%}
+	return 0
+
+function dbd_CurrentPlayers(arena: text):
+	set {_int} to dbd_getPlayers({_arena}, "Alive")
+	if {_int} = 0:
+		set {-dbd::cache::player::%{-dbd::arena::%{_arena}%::cache::hunter}%::GameStats::EscapedStopped} to true
+		set {-dbd::arena::%{_arena}%::cache::SurvivorsStatus} to "&a✔"
+		dbd_resetarena({_arena})
+
+function dbd_getSurvivors(arena: text) :: players:
+	loop {-dbd::arena::%{_arena}%::cache::ninjas::*}:
+		if {-dbd::cache::player::%loop-value%::role} = "Survivor":
+			add loop-value-1 to {_stuff::*}
+	return {_stuff::*}
+
+function dbd_getFixedGenerators(arena: text) :: number:
+	set {_int} to 0
+	loop {dbd::arena::%{_arena}%::generator::*}:
+		if {-dbd::arena::%{_arena}%::cache::generator::state::status::%loop-index%} = "Fixed":
+			add 1 to {_int}
+	return {_int}
+	
+function dbd_knock_player(p: player):
+	set {_loc} to location of {_p}
+	set {_w} to world of {_loc}
+	set {-dbd::cache::player::%{_p}%::playingState} to "Laying"
+	{_w}.playSound({_loc}, Sound..yaml value "Sounds.Generator.Knock" from "leaf.dbd.config", 1 and 1)
+	set {-dbd::cache::player::%{_p}%::corpse} to CorpseAPI.spawnCorpse({_p} and {_loc}) 
+	dbd_CurrentPlayers({-dbd::cache::player::%{_p}%::arena})
+	set {_p}'s gamemode to spectator
+	loop {-dbd::arena::%{-dbd::cache::player::%{_p}%::arena}%::cache::ninjas::*}:
+		loop-value-1 is not {_p}
+		if {-dbd::cache::player::%loop-value%::role} = "Survivor":
+			set {_distance} to distance between {_p} and loop-value-1
+			send replacer "{victim}" and "{distance}" with {_p}'s display name and "%{_distance}%" in yaml value "Messages.Knock" from "leaf.dbd.config" to loop-value-1	
+	while {-dbd::cache::player::%{_p}%::state} is "IN-GAME":
+		if {-dbd::cache::player::%{_p}%::playingState} is "Laying":
+			if distance between {_p} and {_loc} > 0.5:
+				set yaw of {_loc} to yaw of {_p}
+				set pitch of {_loc} to pitch of {_p}
+				teleport {_p} to {_loc}
+		else:
+			stop		
+		wait 5 ticks	
+
+function dbd_hook_player(p: player, hook: text):
+	set {_arena} to {-dbd::cache::player::%{_p}%::arena}
+	set {_loc} to {dbd::arena::%{_arena}%::hook::%{_hook}%}
+	set {-dbd::cache::player::%{_p}%::CurrenHook} to {_hook}							
+	set {-dbd::arena::%{_arena}%::cache::OccupiedHook::%{_hook}%} to true
+	remove 2.5 from y-coords of {_loc}
+	set {-dbd::cache::player::%{_p}%::playingState} to "Hanging"
+	{_p}.setAllowFlight(true)	
+	{_p}.setFlying(true)	
+	dbd_CurrentPlayers({-dbd::cache::player::%{_p}%::arena})
+	set {_int} to 0
+	set {_target} to yaml value "Settings.Misc.Hook.DeathTarget" from "leaf.dbd.config"
+	loop {-dbd::arena::%{-dbd::cache::player::%{_p}%::arena}%::cache::ninjas::*}:
+		loop-value-1 is not {_p}
+		if {-dbd::cache::player::%loop-value%::role} = "Survivor":
+			set {_distance} to distance between {_p} and loop-value-1
+			send replacer "{victim}" and "{distance}" with {_p}'s display name and "%{_distance}%" in yaml value "Messages.Hook" from "leaf.dbd.config" to loop-value-1
+	while {-dbd::cache::player::%{_p}%::state} is "IN-GAME":
+		if {-dbd::cache::player::%{_p}%::playingState} is "Hanging":
+			dbd_show_blood({_p})
+			if distance between {_p} and {_loc} > 0.2:
+				set yaw of {_loc} to yaw of {_p}
+				set pitch of {_loc} to pitch of {_p}
+				teleport {_p} to {_loc}		
+			if {-dbd::cache::player::%{_p}%::HelpingTarget} is not set:
+				add 1 to {_int}
+			set {_bar} to progress from {_int} and {_target} with size 20 and text "&c■" and "&7■"
+			send action bar "&f%{_int}% %{_bar}% &f%{_target}%" to {_p}
+			if {_int} = {_target}:
+				add 1 to {-dbd::cache::player::%{-dbd::arena::%{-dbd::cache::player::%{_p}%::arena}%::cache::hunter}%::GameStats::KilledPlayers}
+				dbd_stats({_p}, "add", "KilledPlayers")				
+				send replacer "{victim}" with {_p}'s display name in yaml value "Messages.Death" from "leaf.dbd.config" to {-dbd::arena::%{-dbd::cache::player::%{_p}%::arena}%::cache::ninjas::*}
+				dbd_send_summary({_p}, {-dbd::cache::player::%{_p}%::arena})				
+				dbd_leave({_p}, false)					
+		else:
+			stop		
+		wait a tick
+
+
+function dbd_generator_fix(arena: text, generator: text):
+	set {-dbd::arena::%{_arena}%::cache::generator::state::status::%{_generator}%} to "Fixed"
+	set {_w} to world of {dbd::arena::%{_arena}%::generator::%{_generator}%}
+	{_w}.playSound({dbd::arena::%{_arena}%::generator::%{_generator}%}, Sound..yaml value "Sounds.Generator.Fixed" from "leaf.dbd.config", 1 and 1)
+	spawn an firework at {dbd::arena::%{_arena}%::generator::%{_generator}%}
+	dbd_update_generator_holo({_arena}, {_generator})	
+#	
+#	loop all blocks in radius 5 of {dbd::arena::%{_arena}%::generator::%{_generator}%}:
+#		loop-block != air
+#		if "%loop-block%" contains "lamp" or "resdstone lamp":
+#			turn of loop-block
+#			set loop-block to active redstone lamp
+#			add location of loop-block to {dbd::arena::%{_arena}%::cache::generatorsON::*}
+
+	if dbd_getFixedGenerators({_arena}) = size of {dbd::arena::%{_arena}%::generator::*}:
+		set {-dbd::arena::%{_arena}%::cache::generator::status::ALL} to "&a✔"	
+		dbd_gate({_arena}, "open")	
+		while {-dbd::arena::%{_arena}%::cache::status} is "IN-GAME":
+			loop all players in radius yaml value "Settings.Misc.Escape.Radius" from "leaf.dbd.config" of {dbd::arena::%{_arena}%::survivorEscape}:
+				send replacer "{player}" with loop-value-1's display name in yaml value "Messages.Escape" from "leaf.dbd.config" to {-dbd::arena::%{-dbd::cache::player::%loop-value-1%::arena}%::cache::ninjas::*}
+				set {-dbd::cache::player::%loop-player%::GameStats::Escaped} to true
+				dbd_stats(loop-player, "add", "Escapes")
+				dbd_send_summary(loop-player, {-dbd::cache::player::%loop-player%::arena})
+				dbd_leave(loop-player, false)				
+			wait a second
+
+function dbd_generator_fail(p: player, generator: text):
+	if {-dbd::arena::%{-dbd::cache::player::%{_p}%::arena}%::cache::generator::state::repair::%{_generator}%} > 100:
+		remove 100 from {-dbd::arena::%{-dbd::cache::player::%{_p}%::arena}%::cache::generator::state::repair::%{_generator}%}
+	set {_w} to world of {_p}
+	FastParticle.spawnParticle({_w}, ParticleType.EXPLOSION_HUGE, {dbd::arena::%{-dbd::cache::player::%{_p}%::arena}%::generator::%{_generator}%} and 1)
+	{_w}.playSound({dbd::arena::%{-dbd::cache::player::%{_p}%::arena}%::generator::%{_generator}%}, Sound..yaml value "Sounds.Generator.Fail" from "leaf.dbd.config", 1 and 1)
+	delete {-dbd::cache::player::%{_p}%::generator::state::%{_generator}%}
+	close {_p}'s inventory
+
+function dbd_generator_fix_menu(p: player, generator: text):
+	open chest inventory with 5 rows named yaml value "Menus.Generator.Menu" from "leaf.dbd.config" to {_p}
+	set {_int} to 0
+	loop 45 times:
+		make a gui slot {_int} of {_p} with black glass pane named "&a" to do nothing
+		add 1 to {_int}
+	set {_stuff} to random element out of 3, 4, 5, 11, 15, 20, 24, 29, 33, 39, 40 and 41
+	set {-dbd::cache::player::%{_p}%::generator::state::%{_generator}%} to "working"
+	loop 3, 4, 5, 15, 24, 33, 41, 40, 39, 29, 20 and 11:
+		make a gui slot loop-value-1 of {_p} with cyan clay named "&a" to run:
+			close {_p}'s inventory
+	loop 3, 4, 5, 15, 24, 33, 41, 40, 39, 29, 20 and 11:
+		if {-dbd::cache::player::%{_p}%::generator::state::%{_generator}%} != "working":
+			stop
+		if display name of top inventory of {_p} is yaml value "Menus.Generator.Menu" from "leaf.dbd.config":	
+			if {-dbd::arena::%{-dbd::cache::player::%{_p}%::arena}%::cache::generator::state::status::%{_generator}%} is "Fixed":
+				delete {-dbd::cache::player::%{_p}%::generator::state::%{_generator}%}
+				close {_p}'s inventory
+				stop 
+			if loop-value-1 = {_stuff}:
+				loop 25 times:	
+					remove the gui slot {_old} of {_p}
+					remove the gui slot loop-value-1 of {_p}
+					make a gui slot loop-value-1 of {_p} with green clay or yellow clay or purple clay named "&8» &aClick in &c%25-loop-number-2% &8«" to run:			
+						set {-dbd::cache::player::%{_p}%::generator::state::%{_generator}%} to "success"
+						{_p}.playSound(location of {_p}, Sound..yaml value "Sounds.Generator.Menu-Success" from "leaf.dbd.config", 1 and 1)
+						stop
+					if {-dbd::cache::player::%{_p}%::generator::state::%{_generator}%} = "success":
+						close {_p}'s inventory
+						stop
+					set {_old} to loop-value-1
+					wait a tick		
+				dbd_generator_fail({_p}, {_generator})		
+				stop					
+				if {-dbd::cache::player::%{_p}%::generator::state::%{_generator}%} is not "success" or "working":
+					dbd_generator_fail({_p}, {_generator})
+				stop
+			make a gui slot loop-value-1 of {_p} with red clay named "&a" to run function dbd_generator_fail({_p}, {_generator})
+			wait 5 ticks	
+			make a gui slot loop-value-1 of {_p} with cyan clay named "&a" to run function dbd_generator_fail({_p}, {_generator})			
+		else:
+			dbd_generator_fail({_p}, {_generator})
+			stop
+			
+on sneak toggle:
+	wait a tick
+	player.isSneaking()	
+	if {-dbd::cache::player::%player%::role} = "Hunter":		
+		player.getPassenger() is not set
+		loop all players in radius 2 of player:
+			if {-dbd::cache::player::%loop-player%::playingState} = "Laying":
+				set {_c} to "&c"
+				set {_type} to {-dbd::cache::player::%loop-player%::playingState}	
+				set {_player} to loop-value-1	
+	if {-dbd::cache::player::%player%::role} = "Survivor":
+		loop all players in radius 2 of player:
+			if {-dbd::cache::player::%loop-player%::playingState} = "Hanging" or "Laying":
+				set {_c} to "&a"
+				set {_type} to {-dbd::cache::player::%loop-player%::playingState}	
+				set {_player} to loop-value-1												
+	if {_player} is set:
+		set {_int} to 0
+		{_player} is not player
+		if {_type} = "Laying":	
+			if {-dbd::cache::player::%player%::role} = "Hunter":
+				set {_bar} to yaml value "Settings.Misc.Action-Bar.Starting-Grab" from "leaf.dbd.config"			
+			if {-dbd::cache::player::%player%::role} = "Survivor":
+				set {_bar} to yaml value "Settings.Misc.Action-Bar.Saving-Player" from "leaf.dbd.config"
+			set {_target} to yaml value "Settings.Misc.Grab.Target" from "leaf.dbd.config"									
+		if {_type} = "Hanging":
+			set {_bar} to yaml value "Settings.Misc.Action-Bar.Saving-Player" from "leaf.dbd.config"
+			set {_target} to yaml value "Settings.Misc.Hook.Target" from "leaf.dbd.config"	
+			set {-dbd::cache::player::%{_player}%::HelpingTarget} to player	
+		loop 30 times:
+			if player.isSneaking():
+				send action bar {_bar} to player
+			else:
+				delete {-dbd::cache::player::%{_player}%::HelpingTarget}
+				stop
+			wait a tick					
+		loop {_target} times:
+			if distance between player and {_player} > 3:
+				delete {-dbd::cache::player::%{_player}%::HelpingTarget}
+				stop
+			player.isSneaking():
+				add 1 to {_int}
+				set {_bar} to progress from {_int} and {_target} with size 20 and text "%{_c}%■" and "&7■"
+				send action bar "&f%{_int}% %{_bar}% &f%{_target}%" to player
+				if {_int} = {_target}:	
+					if {-dbd::cache::player::%player%::role} = "Survivor":
+						delete {-dbd::cache::player::%{_player}%::playingState}
+						delete {-dbd::cache::player::%{_player}%::HelpingTarget}
+						if {_type} = "Hanging":
+							{_player}.setAllowFlight(false)	
+							{_player}.setFlying(false)
+							delete {-dbd::arena::%{-dbd::cache::player::%{_player}%::arena}%::cache::OccupiedHook::%{-dbd::cache::player::%{_player}%::CurrenHook}%}
+							delete {-dbd::cache::player::%{_player}%::CurrenHook}
+						if {_type} = "Laying":	
+							dbd_clear_player({_player})
+							CorpseAPI.removeCorpse({-dbd::cache::player::%{_player}%::corpse})
+						set {-dbd::cache::player::%{_player}%::damageState} to 2
+						add 1 to {-dbd::cache::player::%player%::GameStats::FreedPlayers}
+						dbd_stats(player, "add", "FreedPlayers")
+					if {-dbd::cache::player::%player%::role} = "Hunter":				
+						CorpseAPI.removeCorpse({-dbd::cache::player::%{_player}%::corpse})
+						set {-dbd::cache::player::%{_player}%::playingState} to "Grabbed"
+						set {_player}'s gamemode to survival
+						make {_player} ride player 														
+				wait a tick
+			else:
+				delete {-dbd::cache::player::%{_player}%::HelpingTarget}
+				stop
+		stop
+	if {-dbd::cache::player::%player%::role} = "Hunter":
+		if player.getPassenger() is set:
+			loop {dbd::arena::%{-dbd::cache::player::%player%::arena}%::hook::*}:
+				if distance between player and loop-value-1 < yaml value "Settings.Misc.Hook.Radius" from "leaf.dbd.config":
+					if {-dbd::arena::%{-dbd::cache::player::%player%::arena}%::cache::OccupiedHook::%loop-index%} is not set:
+						set {_hook} to loop-index
+			if {_hook} is set:
+				loop 30 times:
+					if player.isSneaking():
+						send action bar yaml value "Settings.Misc.Action-Bar.Starting-Hooking" from "leaf.dbd.config" to player
+					else:
+						stop
+					wait a tick		
+				set {_int} to 0
+				set {_target} to yaml value "Settings.Misc.Hook.Target" from "leaf.dbd.config"
+				loop {_target} times:
+					if distance between player and {dbd::arena::%{-dbd::cache::player::%player%::arena}%::hook::%{_holo}%} > yaml value "Settings.Misc.Hook.Radius" from "leaf.dbd.config":
+						stop
+					player.isSneaking():
+						add 1 to {_int}
+						set {_bar} to progress from {_int} and {_target} with size 20 and text "&c■" and "&7■"
+						send action bar "&f%{_int}% %{_bar}% &f%{_target}%" to player
+						if {_int} = {_target}:
+							dbd_hook_player(player.getPassenger(), {_hook})
+							add 1 to {-dbd::cache::player::%player%::GameStats::HookedPlayers}
+							dbd_stats(player, "add", "HookedPlayers")
+						wait a tick
+					else:
+						stop
+		stop					
+	if {-dbd::cache::player::%player%::role} = "Survivor":
+		loop {dbd::arena::%{-dbd::cache::player::%player%::arena}%::generator::*}:
+			if distance between player and loop-value-1 < yaml value "Settings.Misc.Generator.Radius" from "leaf.dbd.config":
+				if {-dbd::arena::%{-dbd::cache::player::%player%::arena}%::cache::generator::state::status::%loop-index%} != "Fixed":
+					set {_generator} to loop-index
+		if {_generator} is set:
+			if {-dbd::cache::player::%player%::generator::state::%{_generator}%} != "working" or "success":
+				loop 100 times:
+					if player.isSneaking():
+						send action bar yaml value "Settings.Misc.Action-Bar.Starting-Repairing" from "leaf.dbd.config" to player
+					else:
+						stop
+					wait a tick
+			set {_w} to world of player	
+			set {_int2} to rounded random number between 30 and 200			
+			set {_target} to yaml value "Settings.Misc.Generator.Target" from "leaf.dbd.config"
+			loop {_target} times:
+				if distance between player and {dbd::arena::%{-dbd::cache::player::%player%::arena}%::generator::%{_generator}%} > yaml value "Settings.Misc.Generator.Radius" from "leaf.dbd.config":
+					stop
+				if {-dbd::cache::player::%player%::generator::state::%{_generator}%} = "working":
+					stop				
+				if {-dbd::cache::player::%player%::generator::state::%{_generator}%} != "working" or "success":
+					player.isSneaking() != true
+					stop loop
+				if {-dbd::cache::player::%player%::generator::state::%{_generator}%} is set:
+					delete {-dbd::cache::player::%player%::generator::state::%{_generator}%}
+				if {-dbd::arena::%{-dbd::cache::player::%player%::arena}%::cache::generator::state::status::%{_generator}%} is "Broken":
+					add 1 to {_int}
+					add 1 to {_effect}
+					if {_int} = {_int2}:
+						set {_int} to 0
+						set {_int2} to rounded random number between 30 and 200
+						chance of 50%
+						dbd_generator_fix_menu(player, {_generator})
+						stop
+					if {_effect} = 40:
+						set {_effect} to 0					
+						player.playSound(location of player, Sound..yaml value "Sounds.Generator.Repair" from "leaf.dbd.config", 1 and 1)
+						FastParticle.spawnParticle({_w}, ParticleType.VILLAGER_ANGRY, {dbd::arena::%{-dbd::cache::player::%player%::arena}%::generator::%{_generator}%} and 1)	
+					add 1 to {-dbd::cache::player::%player%::GameStats::Generator}		
+					dbd_stats(player, "add", "GeneratorRepaired")							
+					add 1 to {-dbd::arena::%{-dbd::cache::player::%player%::arena}%::cache::generator::state::repair::%{_generator}%}
+					set {_bar} to progress from {-dbd::arena::%{-dbd::cache::player::%player%::arena}%::cache::generator::state::repair::%{_generator}%} and {_target} with size 20 and text "&c■" and "&7■"
+					send action bar "%{-dbd::arena::%{-dbd::cache::player::%player%::arena}%::cache::generator::state::repair::%{_generator}%}% %{_bar}% &f%{_target}%" to player
+					if {-dbd::arena::%{-dbd::cache::player::%player%::arena}%::cache::generator::state::repair::%{_generator}%} = {_target}:
+						dbd_generator_fix({-dbd::cache::player::%player%::arena}, {_generator})
+						stop
+				wait a tick					
+
+on PlayerToggleFlightEvent:
+	if {-dbd::cache::player::%event.getPlayer()%::playingState} is "Hanging":
+		cancel event
+
+on PlayerArmorStandManipulateEvent:
+	if {-dbd::cache::player::%event.getPlayer()%::state} is set:	
+		cancel event
+
+on PlayerInteractEvent:
+	if {-dbd::cache::player::%event.getPlayer()%::state} is set:	
+		if "%event.getAction()%" is "PHYSICAL":
+			cancel event
+	
+on chat:
+	if {-dbd::cache::player::%player%::state} is set:
+		cancel event
+		if {-dbd::arena::%{-dbd::cache::player::%player%::arena}%::cache::status} is "STARTING" or "WAITING":
+			send replacer "{player}" and "{message}" with "%player%" and message in yaml value "Settings.Chat-Format" from "leaf.dbd.config" to {-dbd::arena::%{-dbd::cache::player::%player%::arena}%::cache::ninjas::*}
+			stop
+		if yaml value "Settings.Misc.Disable-Hunter-Chat" from "leaf.dbd.config" is false:
+			send replacer "{player}" and "{message}" with "%player%" and message in yaml value "Settings.Chat-Format" from "leaf.dbd.config" to {-dbd::arena::%{-dbd::cache::player::%player%::arena}%::cache::ninjas::*}
+		if yaml value "Settings.Misc.Disable-Hunter-Chat" from "leaf.dbd.config" is true:
+			if {-dbd::cache::player::%player%::role} = "Hunter":
+				stop		
+			loop {-dbd::arena::%{-dbd::cache::player::%player%::arena}%::cache::ninjas::*}:
+				if {-dbd::cache::player::%loop-value-1%::role} = "Survivor":
+					send replacer "{player}" and "{message}" with "%player%" and message in yaml value "Settings.Chat-Format" from "leaf.dbd.config" to loop-value-1
+on drop:
+	if {-dbd::cache::player::%player%::state} is "IN-GAME":
+		cancel event
+		
+on hunger bar change:	
+	if {-dbd::cache::player::%player%::state} is "IN-GAME":
+		set player's hunger to 20
+
+on right click:
+	if {-dbd::cache::player::%player%::state} is set:
+		if {-dbd::cache::player::%player%::playingState} is "Laying":
+			cancel event
+		if event-item is {-dbd::cache::Items::Leave}:
+			dbd_leave(player)
+
+on join:
+	dbd_stats(player, "check")
+	dbd_no_name(player, false)
+
+on quit:
+	if {-dbd::cache::player::%player%::state} is set:
+		dbd_leave(player)
+	save yaml "leaf.dbd.playerdata.%uuid of player%"
+	unload yaml "leaf.dbd.playerdata.%uuid of player%"
+					
+on break:
+	if {-dbd::cache::player::%player%::state} is "IN-GAME":
+		cancel event
+		
+on inventory click:
+	if {-dbd::cache::player::%player%::state} is "IN-GAME":
+		cancel event		
+	
+on place:
+	if {-dbd::cache::player::%player%::state} is "IN-GAME":
+		cancel event
+
+on PacketRetriveEvent:
+	if "%event.getPacketName()%" is "PacketPlayInSteerVehicle":
+		if {-dbd::cache::player::%event.getPlayer()%::playingState} is "Grabbed":
+			event.setCancelled(true)
+
+function dbd_show_blood(p: player):
+	if {-dbd::cache::player::%{_p}%::state} is set:
+		set {_w} to world of {_p}
+		set {_loc} to location of {_p}
+		set {_material} to new MaterialData(Material.."REDSTONE_BLOCK")
+		FastParticle.spawnParticle({_w}, ParticleType.BLOCK_CRACK, {_loc}, 3 and {_material})
+
+function dbd_damage_delay(p: player, item: material):
+	remove {_item} from {_p}'s inventory
+	wait {-dbd::cache::Damage.Delay}
+	if {-dbd::cache::player::%{_p}%::state} is set:
+		give {_item} to {_p}
+
+on damage of player:
+	if {-dbd::cache::player::%victim%::state} is "IN-GAME":
+		if {-dbd::arena::%{-dbd::cache::player::%victim%::arena}%::cache::status} is "STARTING" or "WAITING":
+			cancel event
+			damage cause is void
+			teleport victim to {dbd::arena::%{-dbd::cache::player::%victim%::arena}%::lobby}
+		if {-dbd::arena::%{-dbd::cache::player::%victim%::arena}%::cache::status} is "IN-GAME":
+			if {-dbd::cache::player::%attacker%::role} = {-dbd::cache::player::%victim%::role}:
+				cancel event
+				stop
+			if damage cause is fall:
+				cancel event	
+			if {-dbd::cache::player::%victim%::playingState} is set:
+				cancel event								
+			if {-dbd::cache::player::%attacker%::role} = "Survivor":
+				cancel event								
+			if {-dbd::cache::player::%attacker%::role} = "Hunter": 
+				{-dbd::cache::player::%victim%::playingState} is not set
+				if attacker's tool = air:
+					cancel event
+					stop
+				dbd_damage_delay(attacker, tool of attacker)
+				set victim's health to 20		
+				dbd_show_blood(victim)										
+				remove 1 from {-dbd::cache::player::%victim%::damageState}			
+				if {-dbd::cache::player::%victim%::damageState} != yaml value "Settings.Misc.Player-Health" from "leaf.dbd.config":
+					apply speed 3 without any particles to victim for 5 seconds				
+				if {-dbd::cache::player::%victim%::damageState} = 0:
+					cancel event
+					dbd_knock_player(victim)
+					add 1 to {-dbd::cache::player::%attacker%::GameStats::KockedPlayers}
+					dbd_stats(attacker, "add", "KockedPlayers")					
+			wait a tick
+			set victim's health to 20
+		if {-dbd::arena::%{-dbd::cache::player::%victim%::arena}%::cache::status} is "RESTARTING":				
+			cancel event	
+	if metadata value "DBD_GAME" of victim is set:
+		cancel event
+
+function dbd_start_countdown(arena: text):
+	set {-dbd::arena::%{_arena}%::cache::status} to "STARTING"
+	loop {-dbd::arena::%{_arena}%::cache::seconds} times:
+		if {-dbd::arena::%{_arena}%::cache::status} is "STARTING" or "WAITING":
+			size of {-dbd::arena::%{_arena}%::cache::ninjas::*} >= 2
+			remove 1 from {-dbd::arena::%{_arena}%::cache::seconds}	
+			if {-dbd::arena::%{_arena}%::cache::seconds} = 1 or 2 or 3 or 4 or 5 or 10:
+				send replacer "{seconds}" with "%{-dbd::arena::%{_arena}%::cache::seconds}%" in yaml value "Messages.Starting" from "leaf.dbd.config" to {dbd::arena::%{_arena}%::cache::ninjas::*}	
+			if {-dbd::arena::%{_arena}%::cache::seconds} = 1:
+				size of {-dbd::arena::%{_arena}%::cache::ninjas::*} >= 2:
+					dbd_start({_arena})
+				else:
+					set {-dbd::arena::%{_arena}%::cache::status} to "WAITING"
+					set {-dbd::arena::%{_arena}%::cache::seconds} to yaml value "Settings.Timers.In-Lobby" from "leaf.dbd.config"
+			wait a second			
+		else:
+			stop
+		
+function dbd_resetarena(arena: text):
+	loop {-dbd::arena::%{_arena}%::cache::ninjas::*}:
+		if {-dbd::cache::player::%loop-value%::corpse} is set:
+			CorpseAPI.removeCorpse({-dbd::cache::player::%loop-value%::corpse})	
+		teleport loop-value-1 to {dbd::lobby}
+		delete scoreboard of loop-value-1		
+		dbd_no_name(loop-value-1, false)
+		dbd_send_summary(loop-value-1, {-dbd::cache::player::%loop-value-1%::arena})
+		delete {-dbd::cache::player::%loop-value-1%::*}			
+		dbd_clear_player(loop-value-1)	
+#	loop {dbd::arena::%{_arena}%::cache::generatorsON::*}:
+#		set {_loc} to loop-value-1
+#		{_loc}.getChunk().load()
+#		turn off block at {_loc}
+#		wait a tick
+	dbd_gate({_arena}, "close")
+	delete {-dbd::arena::%{_arena}%::cache::*}			
+	set {-dbd::arena::%{_arena}%::cache::seconds} to yaml value "Settings.Timers.In-Lobby" from "leaf.dbd.config"
+	set {-dbd::arena::%{_arena}%::cache::status} to "WAITING"
+							
+function dbd_clear_player(p: player):						
+	heal {_p}
+	extinguish {_p}
+	set {_p}'s food to 20	
+	clear {_p}'s level
+	clear {_p}'s inventory
+	{_p}.setFlying(false)
+	{_p}.setAllowFlight(false)	
+	set {_p}'s gamemode to survival
+	loop ...{_p}.getActivePotionEffects():
+		{_p}.removePotionEffect(loop-value.getType())	
+	set velocity of {_p} to new vector 0, 0, 0	
+
+function dbd_setSlot(p: player, slot: number, t: text):
+	add "&a", "&b", "&c", "&d", "&e", "&1", "&2", "&3", "&4", "&5", "&6", "&7", "&8", "&9" and "&f" to {_d::*}
+	if {_slot} is between 1 and 15: 
+		set scoreboard line {_slot} of {_p} to "%{_d::%{_slot}%}%%{_t}%"		
+	
+function dbd_createBoard(p: player, t: text):
+	set {_arena} to {-dbd::cache::player::%{_p}%::arena}
+	create scoreboard for {_p}
+	add "&a", "&b", "&c", "&d", "&e", "&1", "&2", "&3", "&4", "&5", "&6", "&7", "&8", "&9" and "&f" to {_d::*}
+	if {_t} is "DBD-WAITING":
+		set scoreboard title of {_p} to yaml value "Scoreboard.Waiting.Name" from "leaf.dbd.config"
+		while {-dbd::cache::player::%{_p}%::arena} = {_arena}:	
+			if {-dbd::arena::%{-dbd::cache::player::%{_p}%::arena}%::cache::status} = "STARTING" or "WAITING":
+				set {_slot} to 1
+				loop yaml list "Scoreboard.Waiting.Lines" from "leaf.dbd.config":
+					set {_value} to "%loop-value-1%"
+					replace all "{now}" with "%now%" in {_value}
+					replace all "{player}" with {_p}'s displayname in {_value}
+					replace all "{timer}" with "%{-dbd::arena::%{_arena}%::cache::seconds}%" in {_value}
+					replace all "{players}" with "%size of {-dbd::arena::%{_arena}%::cache::ninjas::*}%" in {_value}
+					replace all "{arena}" with "%{-dbd::cache::player::%{_p}%::arena}%" in {_value}
+					dbd_setSlot({_p}, {_slot}, colored {_value})
+					add 1 to {_slot}
+			else:
+				stop
+			wait a second		
+	if {_t} is "DBD-GAME":
+		set scoreboard title of {_p} to yaml value "Scoreboard.Game.%{-dbd::cache::player::%{_p}%::role}%.Name" from "leaf.dbd.config"
+		while {-dbd::cache::player::%{_p}%::arena} = {_arena}:	
+			if {-dbd::arena::%{-dbd::cache::player::%{_p}%::arena}%::cache::status} is set:	
+				set {_slot} to 1 
+				loop yaml list "Scoreboard.Game.%{-dbd::cache::player::%{_p}%::role}%.Lines" from "leaf.dbd.config":
+					set {_value} to "%loop-value-1%"
+					replace all "{now}" with "%now%" in {_value}
+					replace all "{players-left}" with "%size of {-dbd::arena::%{_arena}%::cache::ninjas::*}-1%" in {_value}
+					replace all "{total-generators}" with "%size of {dbd::arena::%{_arena}%::generator::*}%" in {_value}
+					replace all "{fixed-generators}" with "%dbd_getFixedGenerators({_arena})%" in {_value}		
+					replace all "{players-in-hook}" with "%dbd_getPlayers({_arena}, ""Hanging"")%" in {_value}	
+					replace all "{players-knocked}" with "%dbd_getPlayers({_arena}, ""Laying"")%" in {_value}	
+					replace all "{players-alive}" with "%dbd_getPlayers({_arena}, ""Alive"")%" in {_value}								
+					replace all "{role}" with yaml value "Scoreboard.Game.%{-dbd::cache::player::%{_p}%::role}%.Role" from "leaf.dbd.config" in {_value}		
+					replace all "{GeneratorsStatus}" with "%{-dbd::arena::%{_arena}%::cache::generator::status::ALL}%" in {_value}	
+					replace all "{EscapeStatus}" with "%{-dbd::arena::%{_arena}%::cache::escape::status::ALL}%" in {_value}
+					replace all "{SurvivorsStatus}" with "%{-dbd::arena::%{_arena}%::cache::SurvivorsStatus}%" in {_value}												 							
+					replace all "{health}" with "%{-dbd::cache::player::%{_p}%::damageState}%" in {_value} 
+					replace all "{player}" with {_p}'s displayname in {_value}
+					dbd_setSlot({_p}, {_slot}, colored {_value})
+					add 1 to {_slot}
+			else:
+				stop							
+			wait a second	
+				
+
+#El Psy Kongroo
