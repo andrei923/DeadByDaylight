@@ -1,4 +1,4 @@
-# ➭ Dead By Deadlight Minigame made using Skript for Minecraft
+# ➭ Dead By Deadlight Minigame for Minecraft.
 
 # ➭ Dependencies:
 > ▪ Skript ➥ https://github.com/SkriptLang/Skript/releases
