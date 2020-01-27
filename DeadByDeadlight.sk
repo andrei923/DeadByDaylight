@@ -31,7 +31,7 @@ import:
 options:
 
 	#do not touch this -_-
-	plugin-version: 1.0.0
+	plugin-version: 1.1.0
 
 local effect [leaf] send title %string% with subtitle %string% to %players% with %number% fadein and %number% fadeout for %number%:		
 	trigger:
@@ -184,7 +184,8 @@ on load:
 	check_yaml("config", "Settings.Misc.Grab.Target", "100", "number")		
 	check_yaml("config", "Settings.Misc.Generator.Radius", "4", "number")			
 	check_yaml("config", "Settings.Misc.Generator.Target", "1000", "number")	
-	check_yaml("config", "Settings.Misc.Generator.Holo", "&cGenerator ##{id}||&cStatus: {status}", "list")		
+	check_yaml("config", "Settings.Misc.Generator.Holo", "&cGenerator ##{id}||&cStatus: {status}", "list")	
+	check_yaml("config", "Settings.Misc.Action-Bar.Starting-Repaired", "&eGenerator Repaired.")			
 	check_yaml("config", "Settings.Misc.Action-Bar.Starting-Repairing", "&aStarting repairing generator...")	
 	check_yaml("config", "Settings.Misc.Action-Bar.Starting-Hooking", "&cHooking player...")	
 	check_yaml("config", "Settings.Misc.Action-Bar.Starting-Grab", "&cGrabbing player...")		
@@ -1021,6 +1022,7 @@ on sneak toggle:
 					set {_bar} to progress from {-dbd::arena::%{-dbd::cache::player::%player%::arena}%::cache::generator::state::repair::%{_generator}%} and {_target} with size 20 and text "&c■" and "&7■"
 					send action bar "%{-dbd::arena::%{-dbd::cache::player::%player%::arena}%::cache::generator::state::repair::%{_generator}%}% %{_bar}% &f%{_target}%" to player
 					if {-dbd::arena::%{-dbd::cache::player::%player%::arena}%::cache::generator::state::repair::%{_generator}%} = {_target}:
+						send action bar yaml value "Settings.Misc.Action-Bar.Starting-Repaired" from "leaf.dbd.config" to player
 						dbd_generator_fix({-dbd::cache::player::%player%::arena}, {_generator})
 						stop
 				wait a tick					
