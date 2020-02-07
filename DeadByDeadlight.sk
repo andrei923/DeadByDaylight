@@ -31,7 +31,7 @@ import:
 options:
 
 	#do not touch this -_-
-	plugin-version: 1.1.0
+	plugin-version: 1.2.0
 
 local effect [leaf] send title %string% with subtitle %string% to %players% with %number% fadein and %number% fadeout for %number%:		
 	trigger:
@@ -190,6 +190,7 @@ on load:
 	check_yaml("config", "Settings.Misc.Action-Bar.Starting-Hooking", "&cHooking player...")	
 	check_yaml("config", "Settings.Misc.Action-Bar.Starting-Grab", "&cGrabbing player...")		
 	check_yaml("config", "Settings.Misc.Action-Bar.Saving-Player", "&aSaving player...")	
+	check_yaml("config", "Settings.Misc.Action-Bar.Nearest-Player", "&c{player} &8(&a{distance}m&8) &cstatus &8(&c{status}&8)")	
 	check_yaml("config", "Settings.Misc.Damage.Delay", "2 seconds")			
 	check_yaml("config", "Settings.Misc.Escape.Radius", "5", "number")	
 	check_yaml("config", "Settings.Misc.HeartBeat.Enabled", "true", "boolean")	
@@ -1120,7 +1121,7 @@ on damage of player:
 				cancel event
 				stop
 			if damage cause is fall:
-				cancel event	
+				cancel event
 			if {-dbd::cache::player::%victim%::playingState} is set:
 				cancel event								
 			if {-dbd::cache::player::%attacker%::role} = "Survivor":
@@ -1247,6 +1248,21 @@ function dbd_createBoard(p: player, t: text):
 					replace all "{player}" with {_p}'s displayname in {_value}
 					dbd_setSlot({_p}, {_slot}, colored {_value})
 					add 1 to {_slot}
+				if {-dbd::cache::player::%{_p}%::role} is "Survivor":
+					if {-dbd::arena::%{-dbd::cache::player::%{_p}%::arena}%::cache::status} = "IN-GAME":
+						loop {-dbd::arena::%{_arena}%::cache::ninjas::*}:
+							if {-dbd::cache::player::%loop-value%::playingState} = "Hanging" or "Laying":
+								set {_player} to loop-value-1
+								if {_distance} is not set:
+									set {_distance} to 1000
+								if distance between {_p} and {_player} < {_distance}:
+									set {_distance} to distance between {_p} and loop-value-1
+									set {_player} to loop-value-1
+						if {_player} is set:
+							set {_msg} to replacer "{player}" and "{distance}" and "{status}" with "%{_player}%" and "%{_distance}%" and {-dbd::cache::player::%{_player}%::playingState} in yaml value "Settings.Misc.Action-Bar.Nearest-Player" from "leaf.dbd.config"
+							send action bar {_msg} to {_p}
+						delete {_player}
+						delete {_distance}
 			else:
 				stop							
 			wait a second	
