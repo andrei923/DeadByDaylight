@@ -426,7 +426,7 @@ command dbd [<text = help>] [<text>] [<text>] [<number>]:
 				if {-dbd::arena::%{-dbd::cache::player::%arg-2%::arena}%::cache::status} is "WAITING" or "STARTING":
 					set {-dbd::cache::player::%arg-2%::role} to "Hunter"
 					set {-dbd::arena::%{-dbd::cache::player::%arg-2%::arena}%::cache::selectedHunter} to true
-					send "&7%arg-2% Will be &cHunter&7 when the game starts."																								
+					send "&7%arg-2% &will be &cHunter&7 when the game starts."																								
 		if arg-1 is "start":
 			if player has permission "dbd.admin":
 				if {-dbd::arena::%{-dbd::cache::player::%player%::arena}%::cache::status} is "WAITING" or "STARTING":
@@ -770,6 +770,7 @@ function dbd_hook_player(p: player, hook: text):
 	set {-dbd::cache::player::%{_p}%::playingState} to "Hanging"
 	{_p}.setAllowFlight(true)	
 	{_p}.setFlying(true)	
+	try {_p}.setGlowing(true)
 	dbd_CurrentPlayers({-dbd::cache::player::%{_p}%::arena})
 	set {_int} to 0
 	set {_target} to yaml value "Settings.Misc.Hook.DeathTarget" from "leaf.dbd.config"
@@ -930,6 +931,7 @@ on sneak toggle:
 						if {_type} = "Hanging":
 							{_player}.setAllowFlight(false)	
 							{_player}.setFlying(false)
+							try {_player}.setGlowing(false)
 							delete {-dbd::arena::%{-dbd::cache::player::%{_player}%::arena}%::cache::OccupiedHook::%{-dbd::cache::player::%{_player}%::CurrenHook}%}
 							delete {-dbd::cache::player::%{_player}%::CurrenHook}
 						if {_type} = "Laying":	
@@ -1176,7 +1178,8 @@ function dbd_resetarena(arena: text):
 		dbd_no_name(loop-value-1, false)
 		dbd_send_summary(loop-value-1, {-dbd::cache::player::%loop-value-1%::arena})
 		delete {-dbd::cache::player::%loop-value-1%::*}			
-		dbd_clear_player(loop-value-1)	
+		dbd_clear_player(loop-value-1)
+		try loop-value-1.setGlowing(false)	
 #	loop {dbd::arena::%{_arena}%::cache::generatorsON::*}:
 #		set {_loc} to loop-value-1
 #		{_loc}.getChunk().load()
