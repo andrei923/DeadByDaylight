@@ -689,14 +689,14 @@ function dbd_start(arena: text):
 		dbd_update_generator_holo({_arena}, loop-index-1)
 	if yaml value "Settings.Misc.Chestplate.Enabled" from "leaf.dbd.config" is true:
 		loop "red", "orange" , "yellow" , "light green" , "green" , "light blue" , "cyan" , "blue" , "purple" , "magenta" and "pink":
-			if loop-value-1 parsed as color is set:
-				add loop-value-1 parsed as color to {_colors::*}
+			if "%loop-value-1%" parsed as color is set:
+				add "%loop-value-1%" parsed as color to {_colors::*}
 			set {_colorsCopy::*} to {_colors::*}
 		loop {-dbd::arena::%{_arena}%::cache::ninjas::*}:
 			if size of {_colors::*} = 0:
 				set {_colorsCopy::*} to {_colors::*}
 			set loop-value-1's chestplate to leather chestplate with custom nbt "{Unbreakable:1,HideFlags:4}"			
-			set loop-value-1 to a random element out of {_colors::*}
+			set {_r} to a random element out of {_colors::*}
 			dye loop-value-1's helmet {_r}
 			remove {_r} from {_colors::*} 
 
