@@ -24,7 +24,7 @@ import:
 options:
 
 	#do not touch this -_-
-	plugin-version: 1.5.0
+	plugin-version: 1.6.0
 
 
 local effect create scoreboard for %player%:	
@@ -227,8 +227,7 @@ command dbd [<text = help>] [<text>] [<text>] [<number>]:
 			if player has permission "dbd.player":
 				send centered "&7☁☁☁☁☁☁☁☁☁☁☁☁☁☁☁☁☁☁☁☁" to player
 				send "&a/dbd list"
-				send "&a/dbd join &8(&7arena_name&8)"
-				send "&a/dbd parachute"				
+				send "&a/dbd join &8(&7arena_name&8)"		
 				send "&a/dbd autojoin"
 				send "&a/dbd leave"
 				send centered "&7☁☁☁☁☁☁☁☁☁☁☁☁☁☁☁☁☁☁☁☁" to player
@@ -812,13 +811,16 @@ function dbd_generator_fix(arena: text, generator: text):
 	if dbd_getFixedGenerators({_arena}) = size of {dbd::arena::%{_arena}%::generator::*}:
 		set {-dbd::arena::%{_arena}%::cache::generator::status::ALL} to "&a✔"	
 		dbd_gate({_arena}, "open")	
-		while {-dbd::arena::%{_arena}%::cache::status} is "IN-GAME":
+		while {-dbd::arena::%{_arena}%::cache::status} is "IN-GAME":				
 			loop all players in radius yaml value "Settings.Misc.Escape.Radius" from "leaf.dbd.config" of {dbd::arena::%{_arena}%::survivorEscape}:
-				send replacer "{player}" with loop-value-1's display name in yaml value "Messages.Escape" from "leaf.dbd.config" to {-dbd::arena::%{-dbd::cache::player::%loop-value-1%::arena}%::cache::ninjas::*}
-				set {-dbd::cache::player::%loop-player%::GameStats::Escaped} to true
-				dbd_stats(loop-player, "add", "Escapes")
-				dbd_send_summary(loop-player, {-dbd::cache::player::%loop-player%::arena})
-				dbd_leave(loop-player, false)				
+				if {-dbd::cache::player::%loop-player%::role} = "Survivor":
+					send replacer "{player}" with loop-value-1's display name in yaml value "Messages.Escape" from "leaf.dbd.config" to {-dbd::arena::%{-dbd::cache::player::%loop-value-1%::arena}%::cache::ninjas::*}
+					set {-dbd::cache::player::%loop-player%::GameStats::Escaped} to true
+					dbd_stats(loop-player, "add", "Escapes")
+					dbd_send_summary(loop-player, {-dbd::cache::player::%loop-player%::arena})
+					dbd_leave(loop-player, false)		
+				if {-dbd::cache::player::%loop-player%::role} = "Hunter":
+					teleport loop-player to {dbd::arena::%{_arena}%::hunterSpawn}								
 			wait a second
 
 function dbd_generator_fail(p: player, generator: text):
