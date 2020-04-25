@@ -8,23 +8,22 @@ import:
 	org.bukkit.Location
 	org.bukkit.Bukkit
 	org.bukkit.util.EulerAngle 
-	org.golde.bukkit.corpsereborn.CorpseAPI.CorpseAPI
-	org.bukkit.util.Vector
-	fr.mrmicky.fastparticle.FastParticle
-	fr.mrmicky.fastparticle.ParticleType	
+	org.bukkit.util.Vector	
 	com.leaf.nbt.nbtapi.NBTItem
 	com.leaf.nbt.nbtapi.NBTEntity	
 	com.leaf.nbt.nbtapi.NBTContainer	
-	com.fren_gor.packetUtils.events.PacketRetriveEvent
-	org.bukkit.event.player.PlayerArmorStandManipulateEvent
+	fr.mrmicky.fastparticle.FastParticle
+	fr.mrmicky.fastparticle.ParticleType	
+	com.leaf.packet.PacketRetriveEvent
 	org.bukkit.event.player.PlayerInteractEvent
 	org.bukkit.event.player.PlayerToggleFlightEvent
-	
+	org.golde.bukkit.corpsereborn.CorpseAPI.CorpseAPI
+	org.bukkit.event.player.PlayerArmorStandManipulateEvent	
 	
 options:
 
 	#do not touch this -_-
-	plugin-version: 1.6.0
+	plugin-version: 1.7.0
 
 
 local effect create scoreboard for %player%:	
@@ -152,7 +151,9 @@ on load:
 	check_yaml("config", "Settings.Items.Leave.Slot", "8", "number")					
 	check_yaml("config", "Settings.Timers.In-Lobby", "30", "number")		
 	check_yaml("config", "Settings.Misc.Disable-Names", "true", "boolean")	
-	check_yaml("config", "Settings.Misc.Chestplate", "true", "boolean")		
+	check_yaml("config", "Settings.Misc.Chestplate.Hunter.Enabled", "true", "boolean")		
+	check_yaml("config", "Settings.Misc.Chestplate.Survivor.Enabled", "true", "boolean")	
+	check_yaml("config", "Settings.Misc.Chestplate.Survivor.Colors", "red||orange||yellow||light green||green||light blue||cyan||blue||purple||magenta||pink", "list")	
 	check_yaml("config", "Settings.Misc.Hook.Radius", "5", "number")
 	check_yaml("config", "Settings.Misc.Hook.Target", "100", "number")	
 	check_yaml("config", "Settings.Misc.Hook.DeathTarget", "1000", "number")	
@@ -171,7 +172,7 @@ on load:
 	check_yaml("config", "Settings.Misc.HeartBeat.Enabled", "true", "boolean")	
 	check_yaml("config", "Settings.Misc.HeartBeat.Radius", "12", "number")		
 	check_yaml("config", "Settings.Misc.Disable-Hunter-Chat", "true", "boolean")		
-	check_yaml("config", "Settings.Misc.Player-Health", "4", "number")		
+	check_yaml("config", "Settings.Misc.Player-Health", "4", "number")			
 	check_yaml("config", "Menus.Arena-Browser.Menu", "&8&l» &7DeadByDeadlight Arenas")	
 	check_yaml("config", "Menus.Arena-Browser.Name", "&8» &7Arena: &e{arena}")	
 	check_yaml("config", "Menus.Arena-Browser.Lore", "&8▪ &7Status: &e{status}||&8▪ &7Playing: &e{playing}", "list")
@@ -526,9 +527,17 @@ on load:
 	set {-dbd::cache::TitleManager} to Bukkit.getServer().getPluginManager().getPlugin("TitleManager")	
 	set {-dbd::cache::Heads::Hunter} to player head with custom nbt "{Unbreakable:1,HideFlags:4,SkullOwner:{Id:""a0fd7e20-22e1-4426-bbbe-1848931f9948"",Properties:{textures:[{Value:""eyJ0ZXh0dXJlcyI6eyJTS0lOIjp7InVybCI6Imh0dHA6Ly90ZXh0dXJlcy5taW5lY3JhZnQubmV0L3RleHR1cmUvZWM3Nzg1NThiM2U4NThhOTJlM2EzMTk3MWQ5NWViNDMxNmZiODY4OTgyYzBmMzgwYWFhMzhiNjkwY2M0MWNlOCJ9fX0=""}]}}}"
 	set {-dbd::cache::Damage.Delay} to yaml value "Settings.Misc.Damage.Delay" from "leaf.dbd.config" parsed as timespan
-	if {dbd::lobby} is not set:
-		broadcast "&cDead By Deadlight lobby is not set!."
 	set {-dbd::cache::Items::Leave} to yaml value "Settings.Items.Leave.Item" from "leaf.dbd.config" parsed as material named yaml value "Settings.Items.Leave.Name" from "leaf.dbd.config"
+	set {_sb} to Bukkit.getScoreboardManager().getMainScoreboard()
+	{_sb}.getTeam("DBD.Hunter") is not set:
+		set {_hunter} to {_sb}.registerNewTeam("DBD.Hunter")
+		{_hunter}.setPrefix("&c&k")
+	{_sb}.getTeam("DBD.Survivor") is not set:
+		set {_survivor} to {_sb}.registerNewTeam("DBD.Survivor")
+		{_survivor}.setPrefix("&8&k")		
+	if {dbd::lobby} is not set:
+		broadcast "&cDead By Deadlight lobby is not set!."		
+
 
 on unload:
 	send "&7&l--------------------------------------------" to console
@@ -550,21 +559,13 @@ function dbd_stats(p: player, do: text, type: text = "Survivor"):
 	save yaml "leaf.dbd.playerdata.%uuid of {_p}%"
 	
 function dbd_no_name(p: player, type: boolean):
-	set {_sb} to Bukkit.getScoreboardManager().getMainScoreboard()
+	if {_sb}.getPlayerTeam({_p}) is set:
+		{_sb}.getPlayerTeam({_p}).removePlayer({_p})
+		wait a second
 	if {_type} = false:
-		if {_sb}.getPlayerTeam({_p}) is set:
-			{_sb}.getPlayerTeam({_p}).unregister()
-		stop
-	set {_team} to {_sb}.getPlayerTeam({_p})
-	if {_team} != null:
-		set {_team} to {_sb}.getTeam({_p}.getName())
-		if {_team} is not set:
-			set {_team} to {_sb}.registerNewTeam({_p}.getName())
-			{_team}.addPlayer({_p})
-	if {-dbd::cache::player::%{_p}%::role} = "Hunter":
-		{_team}.setPrefix("&c&k")
-	else:
-		{_team}.setPrefix("&8&k")
+		stop	
+	set {_team} to {_sb}.getTeam("DBD.%{-dbd::cache::player::%{_p}%::role}%")
+	{_team}.addPlayer({_p})
 
 function dbd_spawn_hook(loc: location):
 	loop all spiders in radius 1 of {_loc}:
@@ -669,6 +670,11 @@ function dbd_start(arena: text):
 			set {-dbd::arena::%{_arena}%::cache::hunter} to loop-value-1
 			if yaml value "Settings.Misc.HeartBeat.Enabled" from "leaf.dbd.config" is true:
 				dbd_heartbeat(loop-value-1)
+			if yaml value "Settings.Misc.Chestplate.Hunter.Enabled" from "leaf.dbd.config" is true:		
+				set loop-value-1's boots to leather boots with custom nbt "{Unbreakable:1,HideFlags:4}"	
+				dye loop-value-1's boots black				
+				set loop-value-1's chestplate to leather chestplate with custom nbt "{Unbreakable:1,HideFlags:4}"	
+				dye loop-value-1's chestplate black					
 		if {-dbd::cache::player::%loop-value-1%::role} = "Survivor":
 			teleport loop-value-1 to {dbd::arena::%{_arena}%::survivorSpawn}
 			set {-dbd::cache::player::%loop-value-1%::damageState} to yaml value "Settings.Misc.Player-Health" from "leaf.dbd.config"
@@ -686,18 +692,19 @@ function dbd_start(arena: text):
 		set {-dbd::arena::%{_arena}%::cache::generator::state::repair::%loop-index-1%} to 0
 		set {-dbd::arena::%{_arena}%::cache::generator::state::status::%loop-index-1%} to "Broken"	
 		dbd_update_generator_holo({_arena}, loop-index-1)
-	if yaml value "Settings.Misc.Chestplate.Enabled" from "leaf.dbd.config" is true:
-		loop "red", "orange" , "yellow" , "light green" , "green" , "light blue" , "cyan" , "blue" , "purple" , "magenta" and "pink":
+	if yaml value "Settings.Misc.Chestplate.Survivor.Enabled" from "leaf.dbd.config" is true:
+		loop yaml list "Settings.Misc.Chestplate.Survivor.Colors" from "leaf.dbd.config":
 			if "%loop-value-1%" parsed as color is set:
 				add "%loop-value-1%" parsed as color to {_colors::*}
 			set {_colorsCopy::*} to {_colors::*}
 		loop {-dbd::arena::%{_arena}%::cache::ninjas::*}:
-			if size of {_colors::*} = 0:
-				set {_colorsCopy::*} to {_colors::*}
-			set loop-value-1's chestplate to leather chestplate with custom nbt "{Unbreakable:1,HideFlags:4}"			
-			set {_r} to a random element out of {_colors::*}
-			dye loop-value-1's helmet {_r}
-			remove {_r} from {_colors::*} 
+			if {-dbd::cache::player::%loop-value-1%::role} = "Survivor":
+				if size of {_colors::*} = 0:
+					set {_colorsCopy::*} to {_colors::*}
+				set loop-value-1's chestplate to leather chestplate with custom nbt "{Unbreakable:1,HideFlags:4}"			
+				set {_r} to a random element out of {_colors::*}
+				dye loop-value-1's chestplate {_r}
+				remove {_r} from {_colors::*} 
 
 function dbd_getPlayers(arena: text, type: text) :: number:
 	loop {-dbd::arena::%{_arena}%::cache::ninjas::*}:
