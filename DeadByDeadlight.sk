@@ -23,7 +23,7 @@ import:
 options:
 
 	#do not touch this -_-
-	plugin-version: 1.7.0
+	plugin-version: 1.8.0
 
 
 local effect create scoreboard for %player%:	
@@ -160,6 +160,7 @@ on load:
 	check_yaml("config", "Settings.Misc.Grab.Target", "100", "number")		
 	check_yaml("config", "Settings.Misc.Generator.Radius", "4", "number")			
 	check_yaml("config", "Settings.Misc.Generator.Target", "1000", "number")	
+	check_yaml("config", "Settings.Misc.Generator.NeededToEscape", "-1", "number")	
 	check_yaml("config", "Settings.Misc.Generator.Holo", "&cGenerator ##{id}||&cStatus: {status}", "list")	
 	check_yaml("config", "Settings.Misc.Action-Bar.Starting-Repaired", "&eGenerator Repaired.")			
 	check_yaml("config", "Settings.Misc.Action-Bar.Starting-Repairing", "&aStarting repairing generator...")	
@@ -172,7 +173,10 @@ on load:
 	check_yaml("config", "Settings.Misc.HeartBeat.Enabled", "true", "boolean")	
 	check_yaml("config", "Settings.Misc.HeartBeat.Radius", "12", "number")		
 	check_yaml("config", "Settings.Misc.Disable-Hunter-Chat", "true", "boolean")		
-	check_yaml("config", "Settings.Misc.Player-Health", "4", "number")			
+	check_yaml("config", "Settings.Misc.Player-Health", "4", "number")		
+	check_yaml("config", "Settings.Misc.GameSounds.Enabled", "true", "boolean")		
+	check_yaml("config", "Settings.Misc.GameSounds.Times", "100||150||50||68", "list")	
+	check_yaml("config", "Settings.Misc.GameSounds.Sounds", "AMBIENCE_CAVE||AMBIENCE_THUNDER", "list")				
 	check_yaml("config", "Menus.Arena-Browser.Menu", "&8&l» &7DeadByDeadlight Arenas")	
 	check_yaml("config", "Menus.Arena-Browser.Name", "&8» &7Arena: &e{arena}")	
 	check_yaml("config", "Menus.Arena-Browser.Lore", "&8▪ &7Status: &e{status}||&8▪ &7Playing: &e{playing}", "list")
@@ -559,7 +563,7 @@ function dbd_stats(p: player, do: text, type: text = "Survivor"):
 	save yaml "leaf.dbd.playerdata.%uuid of {_p}%"
 	
 function dbd_no_name(p: player, type: boolean):
-	if {_sb}.getPlayerTeam({_p}) is set:
+	if {_sb}.getPlayerTeam({_p}) is "DBD.Hunter" or "DBD.Survivor":
 		{_sb}.getPlayerTeam({_p}).removePlayer({_p})
 		wait a second
 	if {_type} = false:
@@ -634,6 +638,20 @@ function dbd_join(p: player, arena: text):
 	else:
 		send "&7You are already playing." to {_p}
 
+function dbd_game_sounds(arena: text):
+	set {_time} to a random element out of yaml list "Settings.Misc.GameSounds.Times" from "leaf.dbd.config"
+	while {-dbd::arena::%{_arena}%::cache::status} is "IN-GAME":
+		add 1 to {_int}
+		if "%{_int}%" = "%{_time}%":
+			set {_int} to 0
+			set {_time} to a random element out of yaml list "Settings.Misc.GameSounds.Times" from "leaf.dbd.config"
+			set {_sound} to a random element out of yaml list "Settings.Misc.GameSounds.Sounds" from "leaf.dbd.config"
+			loop {-dbd::arena::%{_arena}%::cache::ninjas::*}:
+				set {_p} to loop-value-1
+				set {_loc} to location of loop-value-1
+				{-dbd::cache::player::%loop-value-1%::role} = "Survivor"
+				{_p}.playSound({_loc}, Sound..{_sound}, 1 and 1)	
+		wait a second
 
 function dbd_update_generator_holo(arena: text, generator: text):
 	set {_loc} to {dbd::arena::%{_arena}%::generator::%{_generator}%}
@@ -705,6 +723,7 @@ function dbd_start(arena: text):
 				set {_r} to a random element out of {_colors::*}
 				dye loop-value-1's chestplate {_r}
 				remove {_r} from {_colors::*} 
+	dbd_game_sounds({_arena})
 
 function dbd_getPlayers(arena: text, type: text) :: number:
 	loop {-dbd::arena::%{_arena}%::cache::ninjas::*}:
@@ -815,7 +834,7 @@ function dbd_generator_fix(arena: text, generator: text):
 #			set loop-block to active redstone lamp
 #			add location of loop-block to {dbd::arena::%{_arena}%::cache::generatorsON::*}
 
-	if dbd_getFixedGenerators({_arena}) = size of {dbd::arena::%{_arena}%::generator::*}:
+	if dbd_getFixedGenerators({_arena}) = size of {dbd::arena::%{_arena}%::generator::*} - yaml value "Settings.Misc.Generator.NeededToEscape" from "leaf.dbd.config":
 		set {-dbd::arena::%{_arena}%::cache::generator::status::ALL} to "&a✔"	
 		dbd_gate({_arena}, "open")	
 		while {-dbd::arena::%{_arena}%::cache::status} is "IN-GAME":				
