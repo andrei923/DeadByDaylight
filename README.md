@@ -9,8 +9,6 @@
 ***
 > ▪ LeafSK ➥ https://github.com/andrei923/LeafSK/releases
 ***
-> ▪ Skript-mirror ➥ https://5-95031857-gh.circle-artifacts.com/0/skript-mirror-2.0.0-SNAPSHOT.jar
-***
 > ▪ CorpseReborn ➥ https://www.spigotmc.org/resources/corpsereborn.29875/
 ***
 > ▪ PacketInjectorAPI ➥ https://www.spigotmc.org/resources/packetinjectorapi-send-packet-to-client-and-to-server.57931/
