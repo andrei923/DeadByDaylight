@@ -242,9 +242,8 @@ on load:
 				add 1 to {_id}
 			set yaml value "%loop-value-1%.Gate.Pos1" from "leaf.dbd.arenas" to {dbd::arena::%loop-value-1%::Gate::Pos1}
 			set yaml value "%loop-value-1%.Gate.Pos2" from "leaf.dbd.arenas" to {dbd::arena::%loop-value-1%::Gate::Pos2}
-#	delete {dbd::arena::*}
-#	delete {dbd::arenas::*}
-
+	delete {dbd::arena::*}
+	delete {dbd::arenas::*}
 	loop "config" and "arenas":		
 		save yaml "leaf.dbd.%loop-value-1%"												
 
