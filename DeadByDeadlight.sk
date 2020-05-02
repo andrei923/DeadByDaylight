@@ -23,7 +23,7 @@ import:
 options:
 
 	#do not touch this -_-
-	plugin-version: 1.8.0
+	plugin-version: 1.9.0
 
 
 local effect create scoreboard for %player%:	
@@ -142,9 +142,10 @@ local expression replacer %texts% with %texts% in %text%:
 
 on load:
 	loop currently loaded yaml files:
-		loop-value contains "leaf.dbd.config"
+		loop-value contains "leaf.dbd.config" or "leaf.dbd.arenas"
 		unload yaml loop-value-1
-	load yaml "plugins/DeadByDeadlight/config.yml" as "leaf.dbd.config"	
+	loop "config" and "arenas":
+		load yaml "plugins/DeadByDeadlight/%loop-value-1%.yml" as "leaf.dbd.%loop-value-1%"	
 	check_yaml("config", "Settings.Chat-Format", "&7{player} &8» &7{message}")							
 	check_yaml("config", "Settings.Items.Leave.Item", "magma cream")		
 	check_yaml("config", "Settings.Items.Leave.Name", "&cLeave the game")	
@@ -221,8 +222,31 @@ on load:
 	check_yaml("config", "Messages.Start.Hunter", "||||&e✦ &7Dead By Deadlight &e✦||||&7You are &e{role} &7your role is to ||&7stop the survivors from escaping.||&7Use &cshift key &7to grab and put them in hook.||||", "list")	
 	check_yaml("config", "Messages.Summary.Survivor", "||||&e✦ &7Dead By Deadlight &e✦||||&aYou &7- &e{player}||&8- &e{role} &8-||&8- &e{status} &8-||||&aGame Results...||||&8▪ &7Freed players &a{freed-players}||&8▪ &7Generator Contribution &a{generator-contribution}||||", "list")			
 	check_yaml("config", "Messages.Summary.Hunter", "||||&e✦ &7Dead By Deadlight &e✦||||&aYou &7- &e{player}||&8- &e{role} &8-||&8- &e{status} &8-||||&aGame Results...||||&8▪ &7Killed players &a{killed-players}||&8▪ &7Hooked players &a{hooked-players}||&8▪ &7Knocked players &a{knocked-players}||||", "list")		
-	save yaml "leaf.dbd.config"
+	#Updating old arenas
+	loop {dbd::arenas::*}:
+		if {dbd::arena::%loop-value-1%::state} is set:
+			set yaml value "%loop-value-1%.State" from "leaf.dbd.arenas" to {dbd::arena::%loop-value-1%::state}
+			set yaml value "%loop-value-1%.Spawn.Lobby" from "leaf.dbd.arenas" to {dbd::arena::%loop-value-1%::lobby}							
+			set yaml value "%loop-value-1%.Settings.MaxPlayers" from "leaf.dbd.arenas" to {dbd::arena::%loop-value-1%::maxplayers}
+			set yaml value "%loop-value-1%.Settings.MinPlayers" from "leaf.dbd.arenas" to {dbd::arena::%loop-value-1%::minplayers}
+			set yaml value "%loop-value-1%.Spawn.Hunter" from "leaf.dbd.arenas" to {dbd::arena::%loop-value-1%::hunterSpawn}
+			set yaml value "%loop-value-1%.Spawn.Survivor" from "leaf.dbd.arenas" to {dbd::arena::%loop-value-1%::survivorSpawn}
+			set yaml value "%loop-value-1%.Escape" from "leaf.dbd.arenas" to {dbd::arena::%loop-value-1%::survivorEscape}
+			set {_id} to 1
+			loop {dbd::arena::%loop-value-1%::generator::*}:
+				set yaml value "%loop-value-1%.Generators.%{_id}%" from "leaf.dbd.arenas" to {dbd::arena::%loop-value-1%::generator::%{_id}%}
+				add 1 to {_id}
+			set {_id} to 1
+			loop {dbd::arena::%loop-value-1%::hook::*}:
+				set yaml value "%loop-value-1%.Hooks.%{_id}%" from "leaf.dbd.arenas" to {dbd::arena::%loop-value-1%::hook::%{_id}%}
+				add 1 to {_id}
+			set yaml value "%loop-value-1%.Gate.Pos1" from "leaf.dbd.arenas" to {dbd::arena::%loop-value-1%::Gate::Pos1}
+			set yaml value "%loop-value-1%.Gate.Pos2" from "leaf.dbd.arenas" to {dbd::arena::%loop-value-1%::Gate::Pos2}
+#	delete {dbd::arena::*}
+#	delete {dbd::arenas::*}
 
+	loop "config" and "arenas":		
+		save yaml "leaf.dbd.%loop-value-1%"												
 
 command dbd [<text = help>] [<text>] [<text>] [<number>]:
 	aliases: dbd
@@ -265,7 +289,7 @@ command dbd [<text = help>] [<text>] [<text>] [<number>]:
 				open chest inventory with 6 rows named yaml value "Menus.Arena-Browser.Menu" from "leaf.dbd.config" to player
 				wait a tick	
 				set {_slot} to 10						
-				loop {dbd::arenas::*}:
+				loop {-dbd::cache::arenas::*}:
 					set {_item} to green clay named replacer "{arena}" with loop-value-1 in yaml value "Menus.Arena-Browser.Name" from "leaf.dbd.config"
 					set {_lore::*} to yaml list "Menus.Arena-Browser.Lore" from "leaf.dbd.config"
 					replace all "{status}" with "%{-dbd::arena::%loop-value%::cache::status}%" in {_lore::*}
@@ -293,119 +317,139 @@ command dbd [<text = help>] [<text>] [<text>] [<number>]:
 			dbd_leave(player)
 		if arg-1 is "autojoin":		
 			if {-dbd::cache::player::%player%::state} is not set:
-				loop {dbd::arenas::*}:
+				loop {-dbd::cache::arenas::*}:
 					if {-dbd::arena::%loop-value%::cache::status} is "WAITING" or "STARTING":
 						dbd_join(player, loop-value)
 						stop
 		if arg-1 is "createarena":	
 			if player has permission "dbd.admin":		
 				if arg-2 is set:
-					if {dbd::arena::%arg-2%::state} is not set:
-						set {dbd::arena::%arg-2%::state} to "created"
-						set {-dbd::cache::player::setup} to arg-2
+					if yaml value "%arg-2%.State" from "leaf.dbd.arenas" is not set:
+						set yaml value "%arg-2%.State" from "leaf.dbd.arenas" to "created"
 						send "&aArena &c%arg-2% &ahas been created!"
+						save yaml "leaf.dbd.arenas"
 					else:
 						send "&aThis arena already exists!"	
 				else:
 					send "&aSpecify Arena!"		
 		if arg-1 is "setGatePos1":
 			if player has permission "dbd.admin":		
-				if {dbd::arena::%arg-2%::state} is "created" or "ready":
-					set {dbd::arena::%arg-2%::Gate::Pos1} to location of target block
-					send "&aGate Pos1 &asetted to &3%target block% &afor Arena &3%arg-2% &ahas been set!"						
+				if yaml value "%arg-2%.State" from "leaf.dbd.arenas" is "created" or "ready":
+					set yaml value "%arg-2%.Gate.Pos1" from "leaf.dbd.arenas" to location of target block
+					send "&aGate Pos1 &asetted to &3%target block% &afor Arena &3%arg-2% &ahas been set!"	
+					save yaml "leaf.dbd.arenas"					
 				else:
 					send "&aThis arena not exists"	
 		if arg-1 is "setGatePos2":
 			if player has permission "dbd.admin":		
-				if {dbd::arena::%arg-2%::state} is "created" or "ready":
-					set {dbd::arena::%arg-2%::Gate::Pos2} to location of target block
-					send "&aGate Pos2 &asetted to &3%target block% &afor Arena &3%arg-2% &ahas been set!"						
+				if yaml value "%arg-2%.State" from "leaf.dbd.arenas" is "created" or "ready":
+					set yaml value "%arg-2%.Gate.Pos2" from "leaf.dbd.arenas" to location of target block
+					send "&aGate Pos2 &asetted to &3%target block% &afor Arena &3%arg-2% &ahas been set!"
+					save yaml "leaf.dbd.arenas"						
 				else:
 					send "&aThis arena not exists"								
 		if arg-1 is "addhook":
 			if player has permission "dbd.admin":		
-				if {dbd::arena::%arg-2%::state} is "created" or "ready":
-					set {_id} to size of {dbd::arena::%arg-2%::hook::*} + 1
-					set {dbd::arena::%arg-2%::hook::%{_id}%} to location of target block
-					set yaw of {dbd::arena::%arg-2%::hook::%{_id}%} to yaw of player
-					send "&aHook with id &3%{_id}% &asetted to &3%target block% &afor Arena &3%arg-2% &ahas been set!"						
+				if yaml value "%arg-2%.State" from "leaf.dbd.arenas" is "created" or "ready":
+					set {_id} to size of yaml nodes with keys "%arg-2%.Hooks" from "leaf.dbd.arenas" + 1
+					set {_loc} to location of target block
+					set yaw of {_loc} to yaw of player
+					set yaml value "%arg-2%.Hooks.%{_id}%" from "leaf.dbd.arenas" to {_loc}
+					send "&aHook with id &3%{_id}% &asetted to &3%target block% &afor Arena &3%arg-2% &ahas been set!"	
+					save yaml "leaf.dbd.arenas"					
 				else:
 					send "&aThis arena not exists"		
 		if arg-1 is "removehook":
 			if player has permission "dbd.admin":		
-				if {dbd::arena::%arg-2%::state} is "created" or "ready":
-					loop {dbd::arena::%arg-2%::hook::*}:
-						if distance between {dbd::arena::%arg-2%::hook::%loop-index%} and player < 3:
-							delete {dbd::arena::%arg-2%::hook::%loop-index%}
-							remove loop-value-1 from {dbd::arena::%arg-2%::hook::*}
-							send "&aHook with id &3%loop-value-1% &afor Arena &3%arg-2% &ahas been deleted!"	
+				if yaml value "%arg-2%.State" from "leaf.dbd.arenas" is "created" or "ready":
+					loop yaml nodes with keys "%arg-2%.Hooks" from "leaf.dbd.arenas":
+						set {_id} to loop-value-1
+						set {_loc} to yaml value "%arg-2%.Hooks.%{_id}%" from "leaf.dbd.arenas"
+						if distance between {_loc} and player < 3:
+							delete yaml value "%arg-2%.Hooks.%{_id}%" from "leaf.dbd.arenas"
+							send "&aHook with id &3%{_id}% &afor Arena &3%arg-2% &ahas been deleted!"	
+							save yaml "leaf.dbd.arenas"
 							stop					
 				else:
 					send "&aThis arena not exists"	
 		if arg-1 is "addgenerator":
 			if player has permission "dbd.admin":		
-				if {dbd::arena::%arg-2%::state} is "created" or "ready":
-					set {_id} to size of {dbd::arena::%arg-2%::generator::*} + 1
-					set {dbd::arena::%arg-2%::generator::%{_id}%} to location of player
+				if yaml value "%arg-2%.State" from "leaf.dbd.arenas" is "created" or "ready":
+					set {_id} to size of yaml nodes with keys "%arg-2%.Generators" from "leaf.dbd.arenas" + 1
+					set yaml value "%arg-2%.Generator.%{_id}%" from "leaf.dbd.arenas" to location of player
 					dbd_update_generator_holo(arg-2, {_id})
-					send "&aGenerator with id %{_id}% for Arena &3%arg-2% &ahas been set!"						
+					send "&aGenerator with id %{_id}% for Arena &3%arg-2% &ahas been set!"	
+					save yaml "leaf.dbd.arenas"					
 				else:
 					send "&aThis arena not exists"		
 		if arg-1 is "removegenerator":
 			if player has permission "dbd.admin":		
-				if {dbd::arena::%arg-2%::state} is "created" or "ready":
-					loop {dbd::arena::%arg-2%::generator::*}:
-						if distance between {dbd::arena::%arg-2%::generator::%loop-index%} and player < 1:
-							delete {dbd::arena::%arg-2%::generator::%loop-index%}
+				if yaml value "%arg-2%.State" from "leaf.dbd.arenas" is "created" or "ready":
+					loop yaml nodes with keys "%arg-2%.Generators" from "leaf.dbd.arenas":
+						set {_id} to loop-value-1
+						set {_loc} to yaml value "%arg-2%.Generators.%{_id}%" from "leaf.dbd.arenas"					
+						if distance between {_loc} and player < 1:
+							delete yaml value "%arg-2%.Generators.%{_id}%" from "leaf.dbd.arenas"
 							loop all entities in radius 1 of {_loc}:
 								loop-entity = armor stand
 								clear loop-entity
 							send "&aGenerator with id %loop-value-1% for Arena &3%arg-2% &ahas been deleted!"	
+							save yaml "leaf.dbd.arenas"
 							stop					
 				else:
 					send "&aThis arena not exists"															
 		if arg-1 is "sethunterSpawn":
 			if player has permission "dbd.admin":		
-				if {dbd::arena::%arg-2%::state} is "created" or "ready":
-					set {dbd::arena::%arg-2%::hunterSpawn} to location of player
-					send "&aHunter Spawn for Arena &3%arg-2% &ahas been set!"						
+				if yaml value "%arg-2%.State" from "leaf.dbd.arenas" is "created" or "ready":
+					set yaml value "%arg-2%.Spawn.Hunter" from "leaf.dbd.arenas" to location of player
+					send "&aHunter Spawn for Arena &3%arg-2% &ahas been set!"			
+					save yaml "leaf.dbd.arenas"			
 				else:
 					send "&aThis arena not exists"							
 		if arg-1 is "setsurvivorSpawn":
 			if player has permission "dbd.admin":		
-				if {dbd::arena::%arg-2%::state} is "created" or "ready":
-					set {dbd::arena::%arg-2%::survivorSpawn} to location of player
-					send "&aSurvivor Spawn for Arena &3%arg-2% &ahas been set!"						
+				if yaml value "%arg-2%.State" from "leaf.dbd.arenas" is "created" or "ready":
+					set yaml value "%arg-2%.Spawn.Survivor" from "leaf.dbd.arenas" to location of player
+					send "&aSurvivor Spawn for Arena &3%arg-2% &ahas been set!"		
+					save yaml "leaf.dbd.arenas"				
 				else:
 					send "&aThis arena not exists"		
 		if arg-1 is "setsurvivorEscape":
 			if player has permission "dbd.admin":		
-				if {dbd::arena::%arg-2%::state} is "created" or "ready":
-					set {dbd::arena::%arg-2%::survivorEscape} to location of player
-					send "&aSurvivor Escape for Arena &3%arg-2% &ahas been set!"						
+				if yaml value "%arg-2%.State" from "leaf.dbd.arenas" is "created" or "ready":
+					set yaml value "%arg-2%.Escape" from "leaf.dbd.arenas" to location of player
+					send "&aSurvivor Escape for Arena &3%arg-2% &ahas been set!"
+					save yaml "leaf.dbd.arenas"						
 				else:
 					send "&aThis arena not exists"																				
 		if arg-1 is "setarenalobby":
 			if player has permission "dbd.admin":		
-				if {dbd::arena::%arg-2%::state} is "created" or "ready":
-					set {dbd::arena::%arg-2%::lobby} to location of player
-					send "&aLobby for Arena &3%arg-2% &ahas been set!"						
+				if yaml value "%arg-2%.State" from "leaf.dbd.arenas" is "created" or "ready":
+					set yaml value "%arg-2%.Spawn.Lobby" from "leaf.dbd.arenas" to location of player
+					send "&aLobby for Arena &3%arg-2% &ahas been set!"
+					save yaml "leaf.dbd.arenas"						
 				else:
 					send "&aThis arena not exists"		
-		if arg-1 is "setmaxplayers" or "setminplayers":
+		if arg-1 is "setminplayers":
 			if player has permission "dbd.admin":		
-				if {dbd::arena::%arg-2%::state} is "created" or "ready":
-					set {_type} to arg-1
-					replace all "set" with "" in {_type}
-					set {dbd::arena::%arg-2%::%{_type}%} to arg-3 parsed as number
-					replace all "maxplayers" with "Max Players" in {_type}
-					replace all "minplayers" with "Min Players" in {_type}
-					send "&a%{_type}% for Arena &3%arg-2% &ahas been set!"						
+				if yaml value "%arg-2%.State" from "leaf.dbd.arenas" is "created" or "ready":
+					set yaml value "%arg-2%.Settings.MinPlayers" from "leaf.dbd.arenas" to arg-3 parsed as number
+					send "&aMax Players for Arena &3%arg-2% &ahas been set!"
+					save yaml "leaf.dbd.arenas"						
 				else:
-					send "&aThis arena not exists"																
+					send "&aThis arena not exists"	
+		if arg-1 is "setmaxplayers":
+			if player has permission "dbd.admin":		
+				if yaml value "%arg-2%.State" from "leaf.dbd.arenas" is "created" or "ready":
+					set yaml value "%arg-2%.Settings.MaxPlayers" from "leaf.dbd.arenas" to arg-3 parsed as number
+					send "&aMax Players for Arena &3%arg-2% &ahas been set!"
+					save yaml "leaf.dbd.arenas"						
+				else:
+					send "&aThis arena not exists"																			
 		if arg-1 is "setlobby":	
 			if player has permission "dbd.admin":
-				set {dbd::lobby} to location of player
+				set yaml value "Locations.MainLobby" from "leaf.dbd.config" to location of player
+				save yaml "leaf.dbd.config"
 				send "&aLobby set."	
 		if arg-1 is "sethunter":
 			if player has permission "dbd.admin":
@@ -425,19 +469,19 @@ command dbd [<text = help>] [<text>] [<text>] [<number>]:
 				make console execute command "sk reload %script%"
 		if arg-1 is "savearena":	
 			if player has permission "dbd.admin":		
-				if {dbd::arena::%arg-2%::state} is "created":
-					if {dbd::arena::%arg-2%::lobby} is set:								
-						if {dbd::arena::%arg-2%::maxplayers} is set:	
-							if {dbd::arena::%arg-2%::minplayers} is set:	
-								if {dbd::arena::%arg-2%::hunterSpawn} is set:
-									if {dbd::arena::%arg-2%::survivorSpawn} is set:
-										if {dbd::arena::%arg-2%::survivorEscape} is set:
-											if {dbd::arena::%arg-2%::generator::*} is set:
-												if {dbd::arena::%arg-2%::hook::*} is set:
-													if {dbd::arena::%arg-2%::Gate::Pos1} is set:
-														if {dbd::arena::%arg-2%::Gate::Pos2} is set:
-															set {dbd::arena::%arg-2%::state} to "ready"
-															add arg-2 to {dbd::arenas::*}
+				if yaml value "%arg-2%.State" from "leaf.dbd.arenas" is "created":
+					if yaml value "%arg-2%.Spawn.Lobby" from "leaf.dbd.arenas" is set:								
+						if yaml value "%arg-2%.Settings.MaxPlayers" from "leaf.dbd.arenas" is set:	
+							if yaml value "%arg-2%.Settings.MinPlayers" from "leaf.dbd.arenas" is set:	
+								if yaml value "%arg-2%.Spawn.Hunter" from "leaf.dbd.arenas" is set:
+									if yaml value "%arg-2%.Spawn.Survivor" from "leaf.dbd.arenas" is set:
+										if yaml value "%arg-2%.Escape" from "leaf.dbd.arenas" is set:
+											if size of yaml nodes with keys "%arg-2%.Generators" from "leaf.dbd.arenas" > 0:
+												if size of yaml nodes with keys "%arg-2%.Hooks" from "leaf.dbd.arenas" > 0:
+													if yaml value "%arg-2%.Gate.Pos1" from "leaf.dbd.arenas" is set:
+														if yaml value "%arg-2%.Gate.Pos2" from "leaf.dbd.arenas" is set:
+															set yaml value "%arg-2%.State" from "leaf.dbd.arenas" to "ready"
+															add arg-2 to {-dbd::cache::arenas::*}
 															send "&aArena &c%arg-2% &ahas been saved."
 															dbd_resetarena(arg-2)
 														else:
@@ -469,11 +513,12 @@ command dbd [<text = help>] [<text>] [<text>] [<number>]:
 				send "&fPlayers: &a%size of {-dbd::arena::%{-dbd::cache::player::%player%::arena}%::cache::ninjas::*}%"		
 		if arg-1 is "deletearena":	
 			if player has permission "dbd.admin":		
-				if {dbd::arena::%arg-2%::state} is set:
+				if yaml value "%arg-2%.State" from "leaf.dbd.arenas" is set:
 					dbd_resetarena(arg-2)
-					delete {dbd::arena::%arg-2%::*}							
-					remove arg-2 from {dbd::arenas::*}
+					delete yaml value arg-2 from "leaf.dbd.arenas"					
+					remove arg-2 from {-dbd::cache::arenas::*}
 					send "&aArena &c%arg-2% &ahas been deleted."
+					save yaml "leaf.dbd.arenas"
 				else:
 					send "&aThis arena not exists"
 	
@@ -508,14 +553,14 @@ function dbd_send_summary(p: player, arena: text):
 
 function dbd_gate(arena: text, type: text):
 	if {_type} = "open":
-		loop blocks within {dbd::arena::%{_arena}%::Gate::Pos1} to {dbd::arena::%{_arena}%::Gate::Pos2}:
-			set {dbd::arena::%{_arena}%::GateBlocks::Type::%location of loop-block%} to type of loop-block
-			set {dbd::arena::%{_arena}%::GateBlocks::Location::%location of loop-block%} to location of loop-block
+		loop blocks within yaml value "%{_arena}%.Gate.Pos1" from "leaf.dbd.arenas" to yaml value "%{_arena}%.Gate.Pos2" from "leaf.dbd.arenas":
+			set {dbd::cache::arena::%{_arena}%::GateBlocks::Type::%location of loop-block%} to type of loop-block
+			set {dbd::cache::arena::%{_arena}%::GateBlocks::Location::%location of loop-block%} to location of loop-block
 			set loop-block to air
 	if {_type} = "close":
-		loop blocks within {dbd::arena::%{_arena}%::Gate::Pos1} to {dbd::arena::%{_arena}%::Gate::Pos2}:
-			set block at {dbd::arena::%{_arena}%::GateBlocks::Location::%location of loop-block%} to {dbd::arena::%{_arena}%::GateBlocks::Type::%location of loop-block%}
-		delete {dbd::arena::%{_arena}%::GateBlocks::*}
+		loop blocks within yaml value "%{_arena}%.Gate.Pos1" from "leaf.dbd.arenas" to yaml value "%{_arena}%.Gate.Pos2" from "leaf.dbd.arenas":
+			set block at {dbd::cache::arena::%{_arena}%::GateBlocks::Location::%location of loop-block%} to {dbd::cache::arena::%{_arena}%::GateBlocks::Type::%location of loop-block%}
+		delete {dbd::cache::arena::%{_arena}%::GateBlocks::*}
 
 on load:
 	delete {-dbd::cache::*}
@@ -525,8 +570,10 @@ on load:
 	broadcast "&aDeadByDeadlight loaded!"
 	send " " to console
 	send "&7&l--------------------------------------------" to console
-	loop {dbd::arenas::*}:		
-		delete {-dbd::arena::%loop-value-1%::cache::ninjas::*}
+	loop yaml nodes with keys "" from "leaf.dbd.arenas":
+		if yaml value "%loop-value-1%.State" from "leaf.dbd.arenas" is "ready":
+			add loop-value-1 to {-dbd::cache::arenas::*}
+	loop {-dbd::cache::arenas::*}:		
 		dbd_resetarena(loop-value-1)		
 	set {-dbd::cache::TitleManager} to Bukkit.getServer().getPluginManager().getPlugin("TitleManager")	
 	set {-dbd::cache::Heads::Hunter} to player head with custom nbt "{Unbreakable:1,HideFlags:4,SkullOwner:{Id:""a0fd7e20-22e1-4426-bbbe-1848931f9948"",Properties:{textures:[{Value:""eyJ0ZXh0dXJlcyI6eyJTS0lOIjp7InVybCI6Imh0dHA6Ly90ZXh0dXJlcy5taW5lY3JhZnQubmV0L3RleHR1cmUvZWM3Nzg1NThiM2U4NThhOTJlM2EzMTk3MWQ5NWViNDMxNmZiODY4OTgyYzBmMzgwYWFhMzhiNjkwY2M0MWNlOCJ9fX0=""}]}}}"
@@ -539,7 +586,7 @@ on load:
 	{_sb}.getTeam("DBD.Survivor") is not set:
 		set {_survivor} to {_sb}.registerNewTeam("DBD.Survivor")
 		{_survivor}.setPrefix("&8&k")		
-	if {dbd::lobby} is not set:
+	if yaml value "Locations.MainLobby" from "leaf.dbd.config" is not set:
 		broadcast "&cDead By Deadlight lobby is not set!."		
 
 
@@ -565,18 +612,19 @@ function dbd_stats(p: player, do: text, type: text = "Survivor"):
 function dbd_no_name(p: player, type: boolean):
 	if {_sb}.getPlayerTeam({_p}) is "DBD.Hunter" or "DBD.Survivor":
 		{_sb}.getPlayerTeam({_p}).removePlayer({_p})
-		wait a second
 	if {_type} = false:
 		stop	
 	set {_team} to {_sb}.getTeam("DBD.%{-dbd::cache::player::%{_p}%::role}%")
 	{_team}.addPlayer({_p})
 
 function dbd_spawn_hook(loc: location):
+	{_loc}.getChunk().load()
 	loop all spiders in radius 1 of {_loc}:
 		clear loop-entity
 	set pitch of {_loc} to 60
 	spawn an spider at {_loc}
 	set {_s} to spawned spider
+	wait a tick
 	add "{NoAI:1b}" to nbt of {_s}	
 	add "{Silent:1}" to nbt of {_s}		
 	add "{NoGravity:1b}" to nbt of {_s}
@@ -602,7 +650,7 @@ function dbd_leave(p: player, quit: boolean = true):
 				delete {-dbd::cache::player::%{_p}%::CurrenHook}		
 			remove {_p} from {-dbd::arena::%{_arena}%::cache::ninjas::*}
 			if size of {-dbd::arena::%{_arena}%::cache::ninjas::*} = 0 or 1:
-				if {-dbd::arena::%{_arena}%::cache::status} is not "RESTARTING":
+				if {-dbd::arena::%{_arena}%::cache::status} != "WAITING" or "STARTING" or "RESTARTING":
 					dbd_resetarena({_arena})
 			if {_quit} is true:
 				send replacer "{player}" with {_p}'s display name in yaml value "Messages.Leave" from "leaf.dbd.config" to {-dbd::arena::%{-dbd::cache::player::%{_p}%::arena}%::cache::ninjas::*}	
@@ -612,21 +660,21 @@ function dbd_leave(p: player, quit: boolean = true):
 		delete {-dbd::cache::player::%{_p}%::*}	
 		dbd_clear_player({_p})
 		delete scoreboard of {_p}
-		teleport {_p} to {dbd::lobby}		
+		teleport {_p} to yaml value "Locations.MainLobby" from "leaf.dbd.config"		
 		
 function dbd_join(p: player, arena: text):	
 	if {-dbd::cache::player::%{_p}%::state} is not set:
-		if {dbd::arena::%{_arena}%::state} is "ready":
+		if yaml value "%{_arena}%.State" from "leaf.dbd.arenas" is "ready":
 			if {-dbd::arena::%{_arena}%::cache::status} is "WAITING" or "STARTING":
-				if size of {-dbd::arena::%{_arena}%::cache::ninjas::*} < {dbd::arena::%{_arena}%::maxplayers}:
+				if size of {-dbd::arena::%{_arena}%::cache::ninjas::*} < yaml value "%{_arena}%.Settings.MaxPlayers" from "leaf.dbd.arenas":
 					dbd_clear_player({_p})
 					set {-dbd::cache::player::%{_p}%::state} to "IN-GAME"
 					set {-dbd::cache::player::%{_p}%::arena} to {_arena}
-					teleport {_p} to {dbd::arena::%{_arena}%::lobby}
+					teleport {_p} to yaml value "%{_arena}%.Spawn.Lobby" from "leaf.dbd.arenas"
 					dbd_createBoard({_p}, "DBD-WAITING")					
 					set slot yaml value "Settings.Items.Leave.Slot" from "leaf.dbd.config" of {_p} to {-dbd::cache::Items::Leave}
 					add {_p} to {-dbd::arena::%{_arena}%::cache::ninjas::*}		
-					if size of {-dbd::arena::%{_arena}%::cache::ninjas::*} = {dbd::arena::%{_arena}%::minplayers}:
+					if size of {-dbd::arena::%{_arena}%::cache::ninjas::*} = yaml value "%{_arena}%.Settings.MinPlayers" from "leaf.dbd.arenas":
 						dbd_start_countdown({_arena})											
 					send replacer "{player}" and "{players-count}" with {_p}'s display name and "%size of {-dbd::arena::%{_arena}%::cache::ninjas::*}%" in yaml value "Messages.Join" from "leaf.dbd.config" to {-dbd::arena::%{_arena}%::cache::ninjas::*}
 				else:
@@ -654,7 +702,7 @@ function dbd_game_sounds(arena: text):
 		wait a second
 
 function dbd_update_generator_holo(arena: text, generator: text):
-	set {_loc} to {dbd::arena::%{_arena}%::generator::%{_generator}%}
+	set {_loc} to yaml value "%{_arena}%.Generators.%{_generator}%" from "leaf.dbd.arenas"
 	add 1 to y-coords of {_loc}
 	set {_holo::*} to yaml list "Settings.Misc.Generator.Holo" from "leaf.dbd.config"
 	replace all "{id}" with "%{_generator}%" in {_holo::*}
@@ -673,12 +721,13 @@ function dbd_start(arena: text):
 	set {-dbd::arena::%{_arena}%::cache::escape::status::ALL} to "&c✘"		
 	set {-dbd::arena::%{_arena}%::cache::generator::status::ALL} to "&c✘"	
 	loop {-dbd::arena::%{_arena}%::cache::ninjas::*}:
+		dbd_no_name(loop-value-1, false)
 		dbd_clear_player(loop-value-1)
 		if {-dbd::cache::player::%loop-value-1%::role} is not set:
 			set {-dbd::cache::player::%loop-value-1%::role} to "Survivor"
 		apply blindness without any particles to loop-value-1 for 3 seconds	
 		if {-dbd::cache::player::%loop-value-1%::role} = "Hunter":
-			teleport loop-value-1 to {dbd::arena::%{_arena}%::hunterSpawn}
+			teleport loop-value-1 to yaml value "%{_arena}%.Spawn.Hunter" from "leaf.dbd.arenas"
 			set loop-value-1's helmet to {-dbd::cache::Heads::Hunter}
 			set slot 0 of loop-value-1 to stone axe with custom nbt "{Unbreakable:1,HideFlags:4}"
 			apply mining fatigue without any particles to loop-value-1 for 999 days
@@ -694,7 +743,7 @@ function dbd_start(arena: text):
 				set loop-value-1's chestplate to leather chestplate with custom nbt "{Unbreakable:1,HideFlags:4}"	
 				dye loop-value-1's chestplate black					
 		if {-dbd::cache::player::%loop-value-1%::role} = "Survivor":
-			teleport loop-value-1 to {dbd::arena::%{_arena}%::survivorSpawn}
+			teleport loop-value-1 to yaml value "%{_arena}%.Spawn.Survivor" from "leaf.dbd.arenas"
 			set {-dbd::cache::player::%loop-value-1%::damageState} to yaml value "Settings.Misc.Player-Health" from "leaf.dbd.config"
 			set {-dbd::cache::player::%loop-value-1%::GameStats::FreedPlayers} to 0
 			set {-dbd::cache::player::%loop-value-1%::GameStats::GeneratorContribution} to 0
@@ -704,12 +753,12 @@ function dbd_start(arena: text):
 			dbd_no_name(loop-value-1, true)	
 		dbd_createBoard(loop-value-1, "DBD-GAME")	
 		dbd_send_start(loop-value-1)
-	loop {dbd::arena::%{_arena}%::hook::*}:
-		dbd_spawn_hook(loop-value-1)
-	loop {dbd::arena::%{_arena}%::generator::*}:
-		set {-dbd::arena::%{_arena}%::cache::generator::state::repair::%loop-index-1%} to 0
-		set {-dbd::arena::%{_arena}%::cache::generator::state::status::%loop-index-1%} to "Broken"	
-		dbd_update_generator_holo({_arena}, loop-index-1)
+	loop yaml nodes with keys "%{_arena}%.Hooks" from "leaf.dbd.arenas":
+		dbd_spawn_hook(yaml value "%{_arena}%.Hooks.%loop-value-1%" from "leaf.dbd.arenas") 
+	loop yaml nodes with keys "%{_arena}%.Generators" from "leaf.dbd.arenas":
+		set {-dbd::arena::%{_arena}%::cache::generator::state::repair::%loop-value-1%} to 0
+		set {-dbd::arena::%{_arena}%::cache::generator::state::status::%loop-value-1%} to "Broken"	
+		dbd_update_generator_holo({_arena}, loop-value-1)
 	if yaml value "Settings.Misc.Chestplate.Survivor.Enabled" from "leaf.dbd.config" is true:
 		loop yaml list "Settings.Misc.Chestplate.Survivor.Colors" from "leaf.dbd.config":
 			if "%loop-value-1%" parsed as color is set:
@@ -753,8 +802,8 @@ function dbd_getSurvivors(arena: text) :: players:
 
 function dbd_getFixedGenerators(arena: text) :: number:
 	set {_int} to 0
-	loop {dbd::arena::%{_arena}%::generator::*}:
-		if {-dbd::arena::%{_arena}%::cache::generator::state::status::%loop-index%} = "Fixed":
+	loop yaml nodes with keys "%{_arena}%.Generators" from "leaf.dbd.arenas":
+		if {-dbd::arena::%{_arena}%::cache::generator::state::status::%loop-value-1%} = "Fixed":
 			add 1 to {_int}
 	return {_int}
 	
@@ -783,7 +832,7 @@ function dbd_knock_player(p: player):
 
 function dbd_hook_player(p: player, hook: text):
 	set {_arena} to {-dbd::cache::player::%{_p}%::arena}
-	set {_loc} to {dbd::arena::%{_arena}%::hook::%{_hook}%}
+	set {_loc} to yaml value "%{_arena}%.Hooks.%{_hook}%" from "leaf.dbd.arenas"
 	set {-dbd::cache::player::%{_p}%::CurrenHook} to {_hook}							
 	set {-dbd::arena::%{_arena}%::cache::OccupiedHook::%{_hook}%} to true
 	remove 2.5 from y-coords of {_loc}
@@ -822,23 +871,24 @@ function dbd_hook_player(p: player, hook: text):
 
 function dbd_generator_fix(arena: text, generator: text):
 	set {-dbd::arena::%{_arena}%::cache::generator::state::status::%{_generator}%} to "Fixed"
-	set {_w} to world of {dbd::arena::%{_arena}%::generator::%{_generator}%}
-	{_w}.playSound({dbd::arena::%{_arena}%::generator::%{_generator}%}, Sound..yaml value "Sounds.Generator.Fixed" from "leaf.dbd.config", 1 and 1)
-	spawn an firework at {dbd::arena::%{_arena}%::generator::%{_generator}%}
+	set {_w} to world of yaml value "%{_arena}%.Generators.%{_generator}%" from "leaf.dbd.arenas"
+	{_w}.playSound(yaml value "%{_arena}%.Generators.%{_generator}%" from "leaf.dbd.arenas", Sound..yaml value "Sounds.Generator.Fixed" from "leaf.dbd.config", 1 and 1)
+	spawn an firework at {-dbd::cache::arena::%{_arena}%::generator::%{_generator}%}
 	dbd_update_generator_holo({_arena}, {_generator})	
 #	
-#	loop all blocks in radius 5 of {dbd::arena::%{_arena}%::generator::%{_generator}%}:
+#	loop all blocks in radius 5 of yaml value "%{_arena}%.Generators.%{_generator}%" from "leaf.dbd.arenas":
 #		loop-block != air
 #		if "%loop-block%" contains "lamp" or "resdstone lamp":
 #			turn of loop-block
 #			set loop-block to active redstone lamp
-#			add location of loop-block to {dbd::arena::%{_arena}%::cache::generatorsON::*}
+#			add location of loop-block to {-dbd::cache::arena::%{_arena}%::cache::generatorsON::*}
 
-	if dbd_getFixedGenerators({_arena}) = size of {dbd::arena::%{_arena}%::generator::*} - yaml value "Settings.Misc.Generator.NeededToEscape" from "leaf.dbd.config":
+	if dbd_getFixedGenerators({_arena}) = size of yaml nodes with keys "%{_arena}%.Generators" from "leaf.dbd.arenas" - yaml value "Settings.Misc.Generator.NeededToEscape" from "leaf.dbd.config":
 		set {-dbd::arena::%{_arena}%::cache::generator::status::ALL} to "&a✔"	
 		dbd_gate({_arena}, "open")	
+		set {_loc} to yaml value "%{_arena}%.Escape" from "leaf.dbd.arenas"
 		while {-dbd::arena::%{_arena}%::cache::status} is "IN-GAME":				
-			loop all players in radius yaml value "Settings.Misc.Escape.Radius" from "leaf.dbd.config" of {dbd::arena::%{_arena}%::survivorEscape}:
+			loop all players in radius yaml value "Settings.Misc.Escape.Radius" from "leaf.dbd.config" of {_loc}:
 				if {-dbd::cache::player::%loop-player%::role} = "Survivor":
 					send replacer "{player}" with loop-value-1's display name in yaml value "Messages.Escape" from "leaf.dbd.config" to {-dbd::arena::%{-dbd::cache::player::%loop-value-1%::arena}%::cache::ninjas::*}
 					set {-dbd::cache::player::%loop-player%::GameStats::Escaped} to true
@@ -846,15 +896,15 @@ function dbd_generator_fix(arena: text, generator: text):
 					dbd_send_summary(loop-player, {-dbd::cache::player::%loop-player%::arena})
 					dbd_leave(loop-player, false)		
 				if {-dbd::cache::player::%loop-player%::role} = "Hunter":
-					teleport loop-player to {dbd::arena::%{_arena}%::hunterSpawn}								
+					teleport loop-player to yaml value "%{_arena}%.Spawn.Hunter" from "leaf.dbd.arenas"
 			wait a second
 
 function dbd_generator_fail(p: player, generator: text):
 	if {-dbd::arena::%{-dbd::cache::player::%{_p}%::arena}%::cache::generator::state::repair::%{_generator}%} > 100:
 		remove 100 from {-dbd::arena::%{-dbd::cache::player::%{_p}%::arena}%::cache::generator::state::repair::%{_generator}%}
 	set {_w} to world of {_p}
-	FastParticle.spawnParticle({_w}, ParticleType.EXPLOSION_HUGE, {dbd::arena::%{-dbd::cache::player::%{_p}%::arena}%::generator::%{_generator}%} and 1)
-	{_w}.playSound({dbd::arena::%{-dbd::cache::player::%{_p}%::arena}%::generator::%{_generator}%}, Sound..yaml value "Sounds.Generator.Fail" from "leaf.dbd.config", 1 and 1)
+	FastParticle.spawnParticle({_w}, ParticleType.EXPLOSION_HUGE, yaml value "%{-dbd::cache::player::%{_p}%::arena}%.Generators.%{_generator}%" from "leaf.dbd.arenas" and 1)
+	{_w}.playSound(yaml value "%{-dbd::cache::player::%{_p}%::arena}%.Generators.%{_generator}%" from "leaf.dbd.arenas", Sound..yaml value "Sounds.Generator.Fail" from "leaf.dbd.config", 1 and 1)
 	delete {-dbd::cache::player::%{_p}%::generator::state::%{_generator}%}
 	close {_p}'s inventory
 
@@ -973,10 +1023,10 @@ on sneak toggle:
 		stop
 	if {-dbd::cache::player::%player%::role} = "Hunter":
 		if player.getPassenger() is set:
-			loop {dbd::arena::%{-dbd::cache::player::%player%::arena}%::hook::*}:
-				if distance between player and loop-value-1 < yaml value "Settings.Misc.Hook.Radius" from "leaf.dbd.config":
-					if {-dbd::arena::%{-dbd::cache::player::%player%::arena}%::cache::OccupiedHook::%loop-index%} is not set:
-						set {_hook} to loop-index
+			loop yaml nodes with keys "%{-dbd::cache::player::%player%::arena}%.Hooks" from "leaf.dbd.arenas":
+				if distance between player and yaml value "%{-dbd::cache::player::%player%::arena}%.Hooks.%loop-value-1%" from "leaf.dbd.arenas" < yaml value "Settings.Misc.Hook.Radius" from "leaf.dbd.config":
+					if {-dbd::arena::%{-dbd::cache::player::%player%::arena}%::cache::OccupiedHook::%loop-value-1%} is not set:
+						set {_hook} to loop-value-1
 			if {_hook} is set:
 				loop 30 times:
 					if player.isSneaking():
@@ -987,7 +1037,7 @@ on sneak toggle:
 				set {_int} to 0
 				set {_target} to yaml value "Settings.Misc.Hook.Target" from "leaf.dbd.config"
 				loop {_target} times:
-					if distance between player and {dbd::arena::%{-dbd::cache::player::%player%::arena}%::hook::%{_holo}%} > yaml value "Settings.Misc.Hook.Radius" from "leaf.dbd.config":
+					if distance between player and yaml value "%{-dbd::cache::player::%player%::arena}%.Hooks.%{_hook}%" from "leaf.dbd.arenas" > yaml value "Settings.Misc.Hook.Radius" from "leaf.dbd.config":
 						stop
 					player.isSneaking():
 						add 1 to {_int}
@@ -1002,13 +1052,13 @@ on sneak toggle:
 						stop
 		stop					
 	if {-dbd::cache::player::%player%::role} = "Survivor":
-		loop {dbd::arena::%{-dbd::cache::player::%player%::arena}%::generator::*}:
-			if distance between player and loop-value-1 < yaml value "Settings.Misc.Generator.Radius" from "leaf.dbd.config":
-				if {-dbd::arena::%{-dbd::cache::player::%player%::arena}%::cache::generator::state::status::%loop-index%} != "Fixed":
-					set {_generator} to loop-index
+		loop yaml nodes with keys "%{-dbd::cache::player::%player%::arena}%.Generators" from "leaf.dbd.arenas":
+			if distance between player and yaml value "%{-dbd::cache::player::%player%::arena}%.Generators.%loop-value-1%" from "leaf.dbd.arenas" < yaml value "Settings.Misc.Generator.Radius" from "leaf.dbd.config":
+				if {-dbd::arena::%{-dbd::cache::player::%player%::arena}%::cache::generator::state::status::%loop-value-1%} != "Fixed":
+					set {_generator} to loop-value-1
 		if {_generator} is set:
 			if {-dbd::cache::player::%player%::generator::state::%{_generator}%} != "working" or "success":
-				loop 100 times:
+				loop 70 times:
 					if player.isSneaking():
 						send action bar yaml value "Settings.Misc.Action-Bar.Starting-Repairing" from "leaf.dbd.config" to player
 					else:
@@ -1018,7 +1068,7 @@ on sneak toggle:
 			set {_int2} to rounded random number between 30 and 200			
 			set {_target} to yaml value "Settings.Misc.Generator.Target" from "leaf.dbd.config"
 			loop {_target} times:
-				if distance between player and {dbd::arena::%{-dbd::cache::player::%player%::arena}%::generator::%{_generator}%} > yaml value "Settings.Misc.Generator.Radius" from "leaf.dbd.config":
+				if distance between player and yaml value "%{-dbd::cache::player::%player%::arena}%.Generators.%{_generator}%" from "leaf.dbd.arenas" > yaml value "Settings.Misc.Generator.Radius" from "leaf.dbd.config":
 					stop
 				if {-dbd::cache::player::%player%::generator::state::%{_generator}%} = "working":
 					stop				
@@ -1039,7 +1089,7 @@ on sneak toggle:
 					if {_effect} = 40:
 						set {_effect} to 0					
 						player.playSound(location of player, Sound..yaml value "Sounds.Generator.Repair" from "leaf.dbd.config", 1 and 1)
-						FastParticle.spawnParticle({_w}, ParticleType.VILLAGER_ANGRY, {dbd::arena::%{-dbd::cache::player::%player%::arena}%::generator::%{_generator}%} and 1)	
+						FastParticle.spawnParticle({_w}, ParticleType.VILLAGER_ANGRY, yaml value "%{-dbd::cache::player::%player%::arena}%.Generators.%{_generator}%" from "leaf.dbd.arenas" and 1)	
 					add 1 to {-dbd::cache::player::%player%::GameStats::GeneratorContribution}									
 					add 1 to {-dbd::arena::%{-dbd::cache::player::%player%::arena}%::cache::generator::state::repair::%{_generator}%}
 					set {_bar} to progress from {-dbd::arena::%{-dbd::cache::player::%player%::arena}%::cache::generator::state::repair::%{_generator}%} and {_target} with size 20 and text "&c■" and "&7■"
@@ -1138,7 +1188,7 @@ on damage of player:
 		if {-dbd::arena::%{-dbd::cache::player::%victim%::arena}%::cache::status} is "STARTING" or "WAITING":
 			cancel event
 			damage cause is void
-			teleport victim to {dbd::arena::%{-dbd::cache::player::%victim%::arena}%::lobby}
+			teleport victim to yaml value "%{-dbd::cache::player::%victim%::arena}%.Spawn.Lobby" from "leaf.dbd.arenas"
 		if {-dbd::arena::%{-dbd::cache::player::%victim%::arena}%::cache::status} is "IN-GAME":
 			if {-dbd::cache::player::%attacker%::role} = {-dbd::cache::player::%victim%::role}:
 				cancel event
@@ -1179,7 +1229,7 @@ function dbd_start_countdown(arena: text):
 			size of {-dbd::arena::%{_arena}%::cache::ninjas::*} >= 2
 			remove 1 from {-dbd::arena::%{_arena}%::cache::seconds}	
 			if {-dbd::arena::%{_arena}%::cache::seconds} = 1 or 2 or 3 or 4 or 5 or 10:
-				send replacer "{seconds}" with "%{-dbd::arena::%{_arena}%::cache::seconds}%" in yaml value "Messages.Starting" from "leaf.dbd.config" to {dbd::arena::%{_arena}%::cache::ninjas::*}	
+				send replacer "{seconds}" with "%{-dbd::arena::%{_arena}%::cache::seconds}%" in yaml value "Messages.Starting" from "leaf.dbd.config" to {-dbd::cache::arena::%{_arena}%::cache::ninjas::*}	
 			if {-dbd::arena::%{_arena}%::cache::seconds} = 1:
 				size of {-dbd::arena::%{_arena}%::cache::ninjas::*} >= 2:
 					dbd_start({_arena})
@@ -1194,13 +1244,13 @@ function dbd_resetarena(arena: text):
 	loop {-dbd::arena::%{_arena}%::cache::ninjas::*}:
 		if {-dbd::cache::player::%loop-value%::corpse} is set:
 			CorpseAPI.removeCorpse({-dbd::cache::player::%loop-value%::corpse})	
-		teleport loop-value-1 to {dbd::lobby}
+		teleport loop-value-1 to yaml value "Locations.MainLobby" from "leaf.dbd.config"
 		delete scoreboard of loop-value-1		
 		dbd_no_name(loop-value-1, false)
 		dbd_send_summary(loop-value-1, {-dbd::cache::player::%loop-value-1%::arena})
 		delete {-dbd::cache::player::%loop-value-1%::*}			
 		dbd_clear_player(loop-value-1)	
-#	loop {dbd::arena::%{_arena}%::cache::generatorsON::*}:
+#	loop {-dbd::cache::arena::%{_arena}%::cache::generatorsON::*}:
 #		set {_loc} to loop-value-1
 #		{_loc}.getChunk().load()
 #		turn off block at {_loc}
@@ -1254,11 +1304,12 @@ function dbd_createBoard(p: player, t: text):
 		while {-dbd::cache::player::%{_p}%::arena} = {_arena}:	
 			if {-dbd::arena::%{-dbd::cache::player::%{_p}%::arena}%::cache::status} is set:	
 				set {_slot} to 1 
+				set {_totalGenerators} to size of yaml nodes with keys "%{_arena}%.Generators" from "leaf.dbd.arenas"
 				loop yaml list "Scoreboard.Game.%{-dbd::cache::player::%{_p}%::role}%.Lines" from "leaf.dbd.config":
 					set {_value} to "%loop-value-1%"
 					replace all "{now}" with "%now%" in {_value}
 					replace all "{players-left}" with "%size of {-dbd::arena::%{_arena}%::cache::ninjas::*}-1%" in {_value}
-					replace all "{total-generators}" with "%size of {dbd::arena::%{_arena}%::generator::*}%" in {_value}
+					replace all "{total-generators}" with "%{_totalGenerators}%" in {_value}
 					replace all "{fixed-generators}" with "%dbd_getFixedGenerators({_arena})%" in {_value}		
 					replace all "{players-in-hook}" with "%dbd_getPlayers({_arena}, ""Hanging"")%" in {_value}	
 					replace all "{players-knocked}" with "%dbd_getPlayers({_arena}, ""Laying"")%" in {_value}	
