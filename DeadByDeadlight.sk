@@ -482,6 +482,7 @@ command dbd [<text = help>] [<text>] [<text>] [<number>]:
 															set yaml value "%arg-2%.State" from "leaf.dbd.arenas" to "ready"
 															add arg-2 to {-dbd::cache::arenas::*}
 															send "&aArena &c%arg-2% &ahas been saved."
+															save yaml "leaf.dbd.arenas"
 															dbd_resetarena(arg-2)
 														else:
 															send "&aGate pos2 is not set!"																	
