@@ -14,7 +14,7 @@ import:
 	com.leaf.nbt.nbtapi.NBTContainer	
 	fr.mrmicky.fastparticle.FastParticle
 	fr.mrmicky.fastparticle.ParticleType	
-	com.leaf.packet.PacketRetriveEvent
+	com.fren_gor.packetUtils.events.PacketRetriveEvent
 	org.bukkit.event.player.PlayerInteractEvent
 	org.bukkit.event.player.PlayerToggleFlightEvent
 	org.golde.bukkit.corpsereborn.CorpseAPI.CorpseAPI
@@ -31,11 +31,6 @@ local effect create scoreboard for %player%:
 		if {-dbd::cache::TitleManager}.hasScoreboard(expr-1) is true:
 			{-dbd::cache::TitleManager}.removeScoreboard(expr-1)
 		{-dbd::cache::TitleManager}.giveScoreboard(expr-1)
-
-local effect [leaf] send action bar %string% to %players%:	
-	trigger:
-		loop exprs-2:
-			{-dbd::cache::TitleManager}.sendActionbar(loop-value-1 and expr-1)
 
 local effect delete scoreboard of %player%:	
 	trigger:
