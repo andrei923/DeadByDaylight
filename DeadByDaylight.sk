@@ -140,7 +140,7 @@ on load:
 		loop-value contains "leaf.dbd.config" or "leaf.dbd.arenas"
 		unload yaml loop-value-1
 	loop "config" and "arenas":
-		load yaml "plugins/DeadByDeadlight/%loop-value-1%.yml" as "leaf.dbd.%loop-value-1%"	
+		load yaml "plugins/DeadByDaylight/%loop-value-1%.yml" as "leaf.dbd.%loop-value-1%"	
 	check_yaml("config", "Settings.Chat-Format", "&7{player} &8» &7{message}")							
 	check_yaml("config", "Settings.Items.Leave.Item", "magma cream")		
 	check_yaml("config", "Settings.Items.Leave.Name", "&cLeave the game")	
@@ -173,23 +173,23 @@ on load:
 	check_yaml("config", "Settings.Misc.GameSounds.Enabled", "true", "boolean")		
 	check_yaml("config", "Settings.Misc.GameSounds.Times", "100||150||50||68", "list")	
 	check_yaml("config", "Settings.Misc.GameSounds.Sounds", "AMBIENCE_CAVE||AMBIENCE_THUNDER", "list")				
-	check_yaml("config", "Menus.Arena-Browser.Menu", "&8&l» &7DeadByDeadlight Arenas")	
+	check_yaml("config", "Menus.Arena-Browser.Menu", "&8&l» &7DeadByDaylight Arenas")	
 	check_yaml("config", "Menus.Arena-Browser.Name", "&8» &7Arena: &e{arena}")	
 	check_yaml("config", "Menus.Arena-Browser.Lore", "&8▪ &7Status: &e{status}||&8▪ &7Playing: &e{playing}", "list")
 	check_yaml("config", "Menus.Arena-Browser.AutoJoin.Name", "&8▪ &eAutoJoin &8▪")	
 	check_yaml("config", "Menus.Arena-Browser.AutoJoin.Item", "beacon")		
-	check_yaml("config", "Menus.Stats.Menu", "&8&l» &7DeadByDeadlight Stats")	
+	check_yaml("config", "Menus.Stats.Menu", "&8&l» &7DeadByDaylight Stats")	
 	check_yaml("config", "Menus.Stats.Hunter.Name", "&cHunter Stats")	
 	check_yaml("config", "Menus.Stats.Hunter.Lore", "&8» &7Killed Players &a{KilledPlayers}||&8» &7Hooked Players &a{HookedPlayers}||&8» &7Knocked Players &a{KnockedPlayers}", "list")	
 	check_yaml("config", "Menus.Stats.Survivor.Name", "&aSurvivor Stats")		
 	check_yaml("config", "Menus.Stats.Survivor.Lore", "&8» &7Freed Players &a{FreedPlayers}||&8» &7Escapes &a{Escapes}||&8» &7Generator Repaired &a{GeneratorsRepaired}", "list")				
 	check_yaml("config", "Menus.Generator.Menu", "&8&l» &7Repairing generator")
-	check_yaml("config", "Scoreboard.Waiting.Name", "&eDead By Deadlight")	
+	check_yaml("config", "Scoreboard.Waiting.Name", "&eDead By Daylight")	
 	check_yaml("config", "Scoreboard.Waiting.Lines", "&7{now}||||&8♦ &fArena: &a{arena}||||&8♦ &fPlayers: &a{players}||||&8♦ &fStarting In: &a{timer}||||&b㋡ &e&nMC.SERVER.NET&r &b㋡", "list")
-	check_yaml("config", "Scoreboard.Game.Hunter.Name", "&eDead By Deadlight") 
+	check_yaml("config", "Scoreboard.Game.Hunter.Name", "&eDead By Daylight") 
 	check_yaml("config", "Scoreboard.Game.Hunter.Role", "&cHunter")	
 	check_yaml("config", "Scoreboard.Game.Hunter.Lines", "&7{now}||&8➭ &fObjectives:||||&8▪ &fKill The Survivors:  {SurvivorsStatus}||||&8➭ &fInfo:||||&8▪ &fRole: &e{role}||&8▪ &fSurvivors Left:  &e{players-left}||&8▪ &fSurvivors Knocked: &c{players-knocked}||&8▪ &fSurvivors In Hook: &c{players-in-hook}||||&eplay.my-cool-server.net", "list")
-	check_yaml("config", "Scoreboard.Game.Survivor.Name", "&eDead By Deadlight")
+	check_yaml("config", "Scoreboard.Game.Survivor.Name", "&eDead By Daylight")
 	check_yaml("config", "Scoreboard.Game.Survivor.Role", "&aSurvivor")		
 	check_yaml("config", "Scoreboard.Game.Survivor.Lines", "&7{now}||&8➭ &fObjectives:||||&8▪ &fRepair Generators:  &e{fixed-generators}/{total-generators} {GeneratorsStatus}||&8▪ &fEscape:  &e{EscapeStatus}||||&8➭ &fInfo:||||&8▪ &fRole: &e{role}||&8▪ &fHealth: &c❤ &e{health}||&8▪ &fSurvivors Left:  &e{players-left}||&8▪ &fSurvivors In Hook: &c{players-in-hook}||&8▪ &fSurvivors In Knocked: &c{players-knocked}||||&eplay.my-cool-server.net", "list")
 	if minecraft version contains "1.8":
@@ -213,10 +213,10 @@ on load:
 	check_yaml("config", "Messages.Knock", "&c➜ &e{victim} &7has been knocked, He's {distance}m away")	
 	check_yaml("config", "Messages.Escape", "&e➜ &e{player} &7has escaped!")		
 	check_yaml("config", "Messages.Starting", "&eThe game starts in &a{seconds} &eseconds")	
-	check_yaml("config", "Messages.Start.Survivor", "||||&e✦ &7Dead By Deadlight &e✦||||&7You are a &e{role} &7your role is to ||&7repair the generators then escape.||&7Use the &cshift key &7to repair generators||&7and revive the other players||||", "list")
-	check_yaml("config", "Messages.Start.Hunter", "||||&e✦ &7Dead By Deadlight &e✦||||&7You are &e{role} &7your role is to ||&7stop the survivors from escaping.||&7Use &cshift key &7to grab and put them in hook.||||", "list")	
-	check_yaml("config", "Messages.Summary.Survivor", "||||&e✦ &7Dead By Deadlight &e✦||||&aYou &7- &e{player}||&8- &e{role} &8-||&8- &e{status} &8-||||&aGame Results...||||&8▪ &7Freed players &a{freed-players}||&8▪ &7Generator Contribution &a{generator-contribution}||||", "list")			
-	check_yaml("config", "Messages.Summary.Hunter", "||||&e✦ &7Dead By Deadlight &e✦||||&aYou &7- &e{player}||&8- &e{role} &8-||&8- &e{status} &8-||||&aGame Results...||||&8▪ &7Killed players &a{killed-players}||&8▪ &7Hooked players &a{hooked-players}||&8▪ &7Knocked players &a{knocked-players}||||", "list")		
+	check_yaml("config", "Messages.Start.Survivor", "||||&e✦ &7Dead By Daylight &e✦||||&7You are a &e{role} &7your role is to ||&7repair the generators then escape.||&7Use the &cshift key &7to repair generators||&7and revive the other players||||", "list")
+	check_yaml("config", "Messages.Start.Hunter", "||||&e✦ &7Dead By Daylight &e✦||||&7You are &e{role} &7your role is to ||&7stop the survivors from escaping.||&7Use &cshift key &7to grab and put them in hook.||||", "list")	
+	check_yaml("config", "Messages.Summary.Survivor", "||||&e✦ &7Dead By Daylight &e✦||||&aYou &7- &e{player}||&8- &e{role} &8-||&8- &e{status} &8-||||&aGame Results...||||&8▪ &7Freed players &a{freed-players}||&8▪ &7Generator Contribution &a{generator-contribution}||||", "list")			
+	check_yaml("config", "Messages.Summary.Hunter", "||||&e✦ &7Dead By Daylight &e✦||||&aYou &7- &e{player}||&8- &e{role} &8-||&8- &e{status} &8-||||&aGame Results...||||&8▪ &7Killed players &a{killed-players}||&8▪ &7Hooked players &a{hooked-players}||&8▪ &7Knocked players &a{knocked-players}||||", "list")		
 	#Updating old arenas
 	loop {dbd::arenas::*}:
 		if {dbd::arena::%loop-value-1%::state} is set:
@@ -562,7 +562,7 @@ on load:
 	send "&7&l--------------------------------------------" to console
 	send " " to console
 	send "&aLoading &ev.{@plugin-version}&a..." to console
-	broadcast "&aDeadByDeadlight loaded!"
+	broadcast "&aDeadByDaylight loaded!"
 	send " " to console
 	send "&7&l--------------------------------------------" to console
 	loop yaml nodes with keys "" from "leaf.dbd.arenas":
@@ -582,7 +582,7 @@ on load:
 		set {_survivor} to {_sb}.registerNewTeam("DBD.Survivor")
 		{_survivor}.setPrefix("&8&k")		
 	if yaml value "Locations.MainLobby" from "leaf.dbd.config" is not set:
-		broadcast "&cDead By Deadlight lobby is not set!."		
+		broadcast "&cDead By Daylight lobby is not set!."		
 
 
 on unload:
@@ -595,7 +595,7 @@ on unload:
 
 function dbd_stats(p: player, do: text, type: text = "Survivor"):
 	if yaml "leaf.dbd.playerdata.%uuid of {_p}%" is not loaded:
-		load yaml "plugins/DeadByDeadlight/playerdata/%uuid of {_p}%.yml" as "leaf.dbd.playerdata.%uuid of {_p}%"	
+		load yaml "plugins/DeadByDaylight/playerdata/%uuid of {_p}%.yml" as "leaf.dbd.playerdata.%uuid of {_p}%"	
 	{_do} is "check":
 		loop "FreedPlayers", "KilledPlayers", "HookedPlayers", "KnockedPlayers", "Escapes" and "GeneratorsRepaired":
 			if yaml value "Stats.%loop-value-1%" from "leaf.dbd.playerdata.%uuid of {_p}%" is not set:

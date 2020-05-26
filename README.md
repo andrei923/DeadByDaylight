@@ -1,4 +1,4 @@
-# ➭ Dead By Deadlight Minigame for Minecraft.
+# ➭ Dead By Daylight Minigame for Minecraft.
 
 # ➭ Dependencies:
 > ▪ Skript ➥ https://github.com/SkriptLang/Skript/releases
@@ -14,7 +14,7 @@
 > ▪ PacketInjectorAPI ➥ https://www.spigotmc.org/resources/packetinjectorapi-send-packet-to-client-and-to-server.57931/
 ***
 
-![GitHub release](https://img.shields.io/github/release/andrei923/DeadByDeadlight.svg?style=for-the-badge)
-![GitHub issues](https://img.shields.io/github/issues-raw/andrei923/DeadByDeadlight.svg?style=for-the-badge)
-![GitHub closed issues](https://img.shields.io/github/issues-closed-raw/andrei923/DeadByDeadlight.svg?style=for-the-badge)
-![GitHub All Releases](https://img.shields.io/github/downloads/andrei923/DeadByDeadlight/total.svg?style=for-the-badge)
+![GitHub release](https://img.shields.io/github/release/andrei923/DeadByDaylight.svg?style=for-the-badge)
+![GitHub issues](https://img.shields.io/github/issues-raw/andrei923/DeadByDaylight.svg?style=for-the-badge)
+![GitHub closed issues](https://img.shields.io/github/issues-closed-raw/andrei923/DeadByDaylight.svg?style=for-the-badge)
+![GitHub All Releases](https://img.shields.io/github/downloads/andrei923/DeadByDaylight/total.svg?style=for-the-badge)
