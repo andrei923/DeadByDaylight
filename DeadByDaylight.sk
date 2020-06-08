@@ -23,7 +23,7 @@ import:
 options:
 
 	#do not touch this -_-
-	plugin-version: 1.9.0
+	plugin-version: 1.2.0
 
 
 local effect create scoreboard for %player%:	
@@ -361,7 +361,7 @@ command dbd [<text = help>] [<text>] [<text>] [<number>]:
 						set {_loc} to yaml value "%arg-2%.Hooks.%{_id}%" from "leaf.dbd.arenas"
 						if distance between {_loc} and player < 3:
 							delete yaml value "%arg-2%.Hooks.%{_id}%" from "leaf.dbd.arenas"
-							send "&aHook with id &3%{_id}% &afor Arena &3%arg-2% &ahas been deleted!"	
+							send "&aHook with id &e%{_id}% &afor Arena &3%arg-2% &ahas been deleted!"	
 							save yaml "leaf.dbd.arenas"
 							stop					
 				else:
@@ -370,9 +370,9 @@ command dbd [<text = help>] [<text>] [<text>] [<number>]:
 			if player has permission "dbd.admin":		
 				if yaml value "%arg-2%.State" from "leaf.dbd.arenas" is "created" or "ready":
 					set {_id} to size of yaml nodes with keys "%arg-2%.Generators" from "leaf.dbd.arenas" + 1
-					set yaml value "%arg-2%.Generator.%{_id}%" from "leaf.dbd.arenas" to location of player
+					set yaml value "%arg-2%.Generators.%{_id}%" from "leaf.dbd.arenas" to location of player
 					dbd_update_generator_holo(arg-2, {_id})
-					send "&aGenerator with id %{_id}% for Arena &3%arg-2% &ahas been set!"	
+					send "&aGenerator with id &e%{_id}% &afor Arena &3%arg-2% &ahas been set!"	
 					save yaml "leaf.dbd.arenas"					
 				else:
 					send "&aThis arena not exists"		
@@ -387,7 +387,7 @@ command dbd [<text = help>] [<text>] [<text>] [<number>]:
 							loop all entities in radius 1 of {_loc}:
 								loop-entity = armor stand
 								clear loop-entity
-							send "&aGenerator with id %loop-value-1% for Arena &3%arg-2% &ahas been deleted!"	
+							send "&aGenerator with id &e%loop-value-1% &afor Arena &3%arg-2% &ahas been deleted!"	
 							save yaml "leaf.dbd.arenas"
 							stop					
 				else:
