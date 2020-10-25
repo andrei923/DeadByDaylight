@@ -18,12 +18,15 @@ import:
 	org.bukkit.event.player.PlayerInteractEvent
 	org.bukkit.event.player.PlayerToggleFlightEvent
 	org.golde.bukkit.corpsereborn.CorpseAPI.CorpseAPI
+	org.bukkit.scoreboard.Team
+	org.bukkit.scoreboard.NameTagVisibility
+	org.bukkit.scoreboard.Scoreboard
 	org.bukkit.event.player.PlayerArmorStandManipulateEvent	
 	
 options:
 
 	#do not touch this -_-
-	plugin-version: 2.0.0
+	plugin-version: 2.0.1
 
 
 local effect create scoreboard for %player%:	
@@ -575,12 +578,8 @@ on load:
 	set {-dbd::cache::Damage.Delay} to yaml value "Settings.Misc.Damage.Delay" from "leaf.dbd.config" parsed as timespan
 	set {-dbd::cache::Items::Leave} to yaml value "Settings.Items.Leave.Item" from "leaf.dbd.config" parsed as material named yaml value "Settings.Items.Leave.Name" from "leaf.dbd.config"
 	set {_sb} to Bukkit.getScoreboardManager().getMainScoreboard()
-	{_sb}.getTeam("DBD.Hunter") is not set:
-		set {_hunter} to {_sb}.registerNewTeam("DBD.Hunter")
-		{_hunter}.setPrefix("&c&k")
-	{_sb}.getTeam("DBD.Survivor") is not set:
-		set {_survivor} to {_sb}.registerNewTeam("DBD.Survivor")
-		{_survivor}.setPrefix("&8&k")		
+	{_sb}.getTeam("DBD.Game") is not set:
+		set {_game} to {_sb}.registerNewTeam("DBD.Game")
 	if yaml value "Locations.MainLobby" from "leaf.dbd.config" is not set:
 		broadcast "&cDead By Daylight lobby is not set!."		
 
@@ -605,12 +604,16 @@ function dbd_stats(p: player, do: text, type: text = "Survivor"):
 	save yaml "leaf.dbd.playerdata.%uuid of {_p}%"
 	
 function dbd_no_name(p: player, type: boolean):
-	if {_sb}.getPlayerTeam({_p}) is "DBD.Hunter" or "DBD.Survivor":
+	set {_sb} to Bukkit.getScoreboardManager().getMainScoreboard()
+	if {_sb}.getPlayerTeam({_p}) is "DBD.Game":
 		{_sb}.getPlayerTeam({_p}).removePlayer({_p})
 	if {_type} = false:
 		stop	
-	set {_team} to {_sb}.getTeam("DBD.%{-dbd::cache::player::%{_p}%::role}%")
+	set {_team} to {_sb}.getTeam("DBD.Game")
+	#{_team}.setOption(Team.Option.NAME_TAG_VISIBILITY and Team.OptionStatus.NEVER)
+	{_team}.setNameTagVisibility(NameTagVisibility.NEVER)
 	{_team}.addPlayer({_p})
+	{_p}.setScoreboard({_sb})
 
 function dbd_spawn_hook(loc: location):
 	{_loc}.getChunk().load()
@@ -624,7 +627,20 @@ function dbd_spawn_hook(loc: location):
 	add "{Silent:1}" to nbt of {_s}		
 	add "{NoGravity:1b}" to nbt of {_s}
 	set metadata value "DBD_GAME" of {_s} to true
-	
+
+function dbd_clear_player(p: player):						
+	heal {_p}
+	extinguish {_p}
+	set {_p}'s food to 20	
+	clear {_p}'s level
+	clear {_p}'s inventory
+	{_p}.setFlying(false)
+	{_p}.setAllowFlight(false)	
+	set {_p}'s gamemode to survival
+	loop ...{_p}.getActivePotionEffects():
+		{_p}.removePotionEffect(loop-value.getType())	
+	set velocity of {_p} to new vector 0, 0, 0	
+
 function dbd_heartbeat(p: player):
 	while {-dbd::cache::player::%{_p}%::state} is "IN-GAME":
 		loop all players in radius yaml value "Settings.Misc.HeartBeat.Radius" from "leaf.dbd.config" of {_p}:
@@ -748,6 +764,7 @@ function dbd_start(arena: text):
 			dbd_no_name(loop-value-1, true)	
 		dbd_createBoard(loop-value-1, "DBD-GAME")	
 		dbd_send_start(loop-value-1)
+		wait a tick
 	loop yaml nodes with keys "%{_arena}%.Hooks" from "leaf.dbd.arenas":
 		dbd_spawn_hook(yaml value "%{_arena}%.Hooks.%loop-value-1%" from "leaf.dbd.arenas") 
 	loop yaml nodes with keys "%{_arena}%.Generators" from "leaf.dbd.arenas":
@@ -1255,19 +1272,6 @@ function dbd_resetarena(arena: text):
 	set {-dbd::arena::%{_arena}%::cache::seconds} to yaml value "Settings.Timers.In-Lobby" from "leaf.dbd.config"
 	set {-dbd::arena::%{_arena}%::cache::status} to "WAITING"
 							
-function dbd_clear_player(p: player):						
-	heal {_p}
-	extinguish {_p}
-	set {_p}'s food to 20	
-	clear {_p}'s level
-	clear {_p}'s inventory
-	{_p}.setFlying(false)
-	{_p}.setAllowFlight(false)	
-	set {_p}'s gamemode to survival
-	loop ...{_p}.getActivePotionEffects():
-		{_p}.removePotionEffect(loop-value.getType())	
-	set velocity of {_p} to new vector 0, 0, 0	
-
 function dbd_setSlot(p: player, slot: number, t: text):
 	add "&a", "&b", "&c", "&d", "&e", "&1", "&2", "&3", "&4", "&5", "&6", "&7", "&8", "&9" and "&f" to {_d::*}
 	if {_slot} is between 1 and 15: 
