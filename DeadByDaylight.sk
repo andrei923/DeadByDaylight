@@ -17,7 +17,6 @@ import:
 	com.fren_gor.packetUtils.events.PacketRetriveEvent
 	org.bukkit.event.player.PlayerInteractEvent
 	org.bukkit.event.player.PlayerToggleFlightEvent
-	org.golde.bukkit.corpsereborn.CorpseAPI.CorpseAPI
 	org.bukkit.scoreboard.Team
 	org.bukkit.scoreboard.NameTagVisibility
 	org.bukkit.scoreboard.Scoreboard
@@ -26,7 +25,7 @@ import:
 options:
 
 	#do not touch this -_-
-	plugin-version: 2.0.1
+	plugin-version: 2.0.2
 
 
 local effect create scoreboard for %player%:	
@@ -315,7 +314,7 @@ command dbd [<text = help>] [<text>] [<text>] [<number>]:
 		if arg-1 is "autojoin":		
 			if {-dbd::cache::player::%player%::state} is not set:
 				loop {-dbd::cache::arenas::*}:
-					if {-dbd::arena::%loop-value%::cache::status} is "WAITING" or "STARTING":
+					if {-dbd::arena::%loop-value%::cache::status} is "Waiting" or "Starting":
 						dbd_join(player, loop-value)
 						stop
 		if arg-1 is "createarena":	
@@ -451,13 +450,13 @@ command dbd [<text = help>] [<text>] [<text>] [<number>]:
 		if arg-1 is "sethunter":
 			if player has permission "dbd.admin":
 				arg-2 parsed as player is set
-				if {-dbd::arena::%{-dbd::cache::player::%arg-2%::arena}%::cache::status} is "WAITING" or "STARTING":
+				if {-dbd::arena::%{-dbd::cache::player::%arg-2%::arena}%::cache::status} is "Waiting" or "Starting":
 					set {-dbd::cache::player::%arg-2%::role} to "Hunter"
 					set {-dbd::arena::%{-dbd::cache::player::%arg-2%::arena}%::cache::selectedHunter} to true
 					send "&7%arg-2% Will be &cHunter&7 when the game starts."																								
 		if arg-1 is "start":
 			if player has permission "dbd.admin":
-				if {-dbd::arena::%{-dbd::cache::player::%player%::arena}%::cache::status} is "WAITING" or "STARTING":
+				if {-dbd::arena::%{-dbd::cache::player::%player%::arena}%::cache::status} is "Waiting" or "Starting":
 					dbd_start({-dbd::cache::player::%player%::arena})
 		if arg-1 is "reload":		
 			if player has permission "dbd.admin":
@@ -615,6 +614,35 @@ function dbd_no_name(p: player, type: boolean):
 	{_team}.addPlayer({_p})
 	{_p}.setScoreboard({_sb})
 
+function dbd_spawn_corpse(p: player, type: text = "Spawn"):
+	set {_loc} to location of {_p}
+	if {_type} is "Spawn":
+		set pitch of {_loc} to 0
+		remove 1.25 from {_loc}'s y-coord
+		spawn armor stand at {_loc}
+		set {_topPart} to spawned armor stand 
+		add "{Invulnerable:1b,NoBasePlate:1b,NoGravity:1b,ShowArms:1b,Pose:{Body:[270f,0f,0f],Head:[283f,0f,0f],LeftLeg:[0f,0f,180f],RightLeg:[0f,0f,180f],LeftArm:[270f,350f,0f],RightArm:[270f,10f,0f]}}" to nbt of {_topPart}
+		set helmet of {_topPart} to {_p}'s skull
+		set chestplate of {_topPart} to {_p}'s chestplate
+		set tool of {_topPart} to torch
+		set {_loc} to location 0.55 in front of {_loc}
+		set y-coords of {_loc} to y-coords of {_topPart}
+		set metadata value "DBD_GAME" of {_topPart} to true
+		set metadata value "DBD_CORPSE_%{_p}%" of {_topPart} to true
+		add 0.67 to {_loc}'s y-coord
+		spawn armor stand at {_loc}
+		set {_bottomPart} to spawned armor stand 	
+		add "{Invisible:1b,Invulnerable:1b,NoBasePlate:1b,NoGravity:1b,ShowArms:1b,Pose:{LeftLeg:[270f,0f,0f],RightLeg:[270f,0f,0f]}}" to nbt of {_bottomPart}
+		set leggings of {_bottomPart} to leather pants
+		set boots of {_bottomPart} to leather boots
+		set metadata value "DBD_GAME" of {_bottomPart} to true
+		set metadata value "DBD_CORPSE_%{_p}%" of {_bottomPart} to true	
+		set {-dbd::arena::%{-dbd::cache::player::%{_p}%::arena}%::cache::corpses::%{_p}%} to {_loc}
+	if {_type} is "Remove":		
+		loop all entities in radius 2 of {-dbd::arena::%{-dbd::cache::player::%{_p}%::arena}%::cache::corpses::%{_p}%}:
+			metadata value "DBD_CORPSE_%{_p}%" of loop-entity is set:
+				clear loop-entity
+
 function dbd_spawn_hook(loc: location):
 	{_loc}.getChunk().load()
 	loop all spiders in radius 1 of {_loc}:
@@ -634,6 +662,10 @@ function dbd_clear_player(p: player):
 	set {_p}'s food to 20	
 	clear {_p}'s level
 	clear {_p}'s inventory
+	set {_p}'s helmet to air	
+	set {_p}'s chestplate to air
+	set {_p}'s leggings to air
+	set {_p}'s boots to air							
 	{_p}.setFlying(false)
 	{_p}.setAllowFlight(false)	
 	set {_p}'s gamemode to survival
@@ -661,7 +693,7 @@ function dbd_leave(p: player, quit: boolean = true):
 				delete {-dbd::cache::player::%{_p}%::CurrenHook}		
 			remove {_p} from {-dbd::arena::%{_arena}%::cache::ninjas::*}
 			if size of {-dbd::arena::%{_arena}%::cache::ninjas::*} = 0 or 1:
-				if {-dbd::arena::%{_arena}%::cache::status} != "WAITING" or "STARTING" or "RESTARTING":
+				if {-dbd::arena::%{_arena}%::cache::status} != "Waiting" or "Starting" or "Restarting":
 					dbd_resetarena({_arena})
 			if {_quit} is true:
 				send replacer "{player}" with {_p}'s display name in yaml value "Messages.Leave" from "leaf.dbd.config" to {-dbd::arena::%{-dbd::cache::player::%{_p}%::arena}%::cache::ninjas::*}	
@@ -676,7 +708,7 @@ function dbd_leave(p: player, quit: boolean = true):
 function dbd_join(p: player, arena: text):	
 	if {-dbd::cache::player::%{_p}%::state} is not set:
 		if yaml value "%{_arena}%.State" from "leaf.dbd.arenas" is "ready":
-			if {-dbd::arena::%{_arena}%::cache::status} is "WAITING" or "STARTING":
+			if {-dbd::arena::%{_arena}%::cache::status} is "Waiting" or "Starting":
 				if size of {-dbd::arena::%{_arena}%::cache::ninjas::*} < yaml value "%{_arena}%.Settings.MaxPlayers" from "leaf.dbd.arenas":
 					dbd_clear_player({_p})
 					set {-dbd::cache::player::%{_p}%::state} to "IN-GAME"
@@ -800,6 +832,7 @@ function dbd_getPlayers(arena: text, type: text) :: number:
 	return 0
 
 function dbd_CurrentPlayers(arena: text):
+	stop
 	set {_int} to dbd_getPlayers({_arena}, "Alive")
 	if {_int} = 0:
 		set {-dbd::cache::player::%{-dbd::arena::%{_arena}%::cache::hunter}%::GameStats::EscapedStopped} to true
@@ -823,15 +856,16 @@ function dbd_knock_player(p: player):
 	set {_loc} to location of {_p}
 	set {_w} to world of {_loc}
 	set {-dbd::cache::player::%{_p}%::playingState} to "Laying"
-	{_w}.playSound({_loc}, Sound..yaml value "Sounds.Generator.Knock" from "leaf.dbd.config", 1 and 1)
-	set {-dbd::cache::player::%{_p}%::corpse} to CorpseAPI.spawnCorpse({_p} and {_loc}) 
+	{_w}.playSound({_loc}, Sound..yaml value "Sounds.Generator.Knock" from "leaf.dbd.config", 1 and 1) 
+	dbd_spawn_corpse({_p})
 	dbd_CurrentPlayers({-dbd::cache::player::%{_p}%::arena})
 	set {_p}'s gamemode to spectator
 	loop {-dbd::arena::%{-dbd::cache::player::%{_p}%::arena}%::cache::ninjas::*}:
 		loop-value-1 is not {_p}
 		if {-dbd::cache::player::%loop-value%::role} = "Survivor":
 			set {_distance} to distance between {_p} and loop-value-1
-			send replacer "{victim}" and "{distance}" with {_p}'s display name and "%{_distance}%" in yaml value "Messages.Knock" from "leaf.dbd.config" to loop-value-1	
+			send replacer "{victim}" and "{distance}" with {_p}'s display name and "%{_distance}%" in yaml value "Messages.Knock" from "leaf.dbd.config" to loop-value-1
+	add 1 to y-coords of {_loc}	
 	while {-dbd::cache::player::%{_p}%::state} is "IN-GAME":
 		if {-dbd::cache::player::%{_p}%::playingState} is "Laying":
 			if distance between {_p} and {_loc} > 0.5:
@@ -839,8 +873,9 @@ function dbd_knock_player(p: player):
 				set pitch of {_loc} to pitch of {_p}
 				teleport {_p} to {_loc}
 		else:
-			stop		
-		wait 5 ticks	
+			stop	
+		FastParticle.spawnParticle({_w}, ParticleType.HEART, {_loc} and 1)				
+		wait 8 ticks	
 
 function dbd_hook_player(p: player, hook: text):
 	set {_arena} to {-dbd::cache::player::%{_p}%::arena}
@@ -1019,12 +1054,12 @@ on sneak toggle:
 							delete {-dbd::cache::player::%{_player}%::CurrenHook}
 						if {_type} = "Laying":	
 							dbd_clear_player({_player})
-							CorpseAPI.removeCorpse({-dbd::cache::player::%{_player}%::corpse})
+							dbd_spawn_corpse({_player}, "Remove")
 						set {-dbd::cache::player::%{_player}%::damageState} to 2
 						add 1 to {-dbd::cache::player::%player%::GameStats::FreedPlayers}
 						dbd_stats(player, "add", "FreedPlayers")
 					if {-dbd::cache::player::%player%::role} = "Hunter":				
-						CorpseAPI.removeCorpse({-dbd::cache::player::%{_player}%::corpse})
+						dbd_spawn_corpse({_player}, "Remove")
 						set {-dbd::cache::player::%{_player}%::playingState} to "Grabbed"
 						set {_player}'s gamemode to survival
 						make {_player} ride player 														
@@ -1129,7 +1164,7 @@ on PlayerInteractEvent:
 on chat:
 	if {-dbd::cache::player::%player%::state} is set:
 		cancel event
-		if {-dbd::arena::%{-dbd::cache::player::%player%::arena}%::cache::status} is "STARTING" or "WAITING":
+		if {-dbd::arena::%{-dbd::cache::player::%player%::arena}%::cache::status} is "Starting" or "Waiting":
 			send replacer "{player}" and "{message}" with "%player%" and message in yaml value "Settings.Chat-Format" from "leaf.dbd.config" to {-dbd::arena::%{-dbd::cache::player::%player%::arena}%::cache::ninjas::*}
 			stop
 		if yaml value "Settings.Misc.Disable-Hunter-Chat" from "leaf.dbd.config" is false:
@@ -1154,6 +1189,11 @@ on right click:
 			cancel event
 		if event-item is {-dbd::cache::Items::Leave}:
 			dbd_leave(player)
+
+on right click on entity:
+	if {-dbd::cache::player::%player%::state} is set:
+		metadata value "DBD_GAME" of clicked entity is set:
+			cancel event
 
 on join:
 	dbd_stats(player, "check")
@@ -1197,7 +1237,7 @@ function dbd_damage_delay(p: player, item: material):
 
 on damage of player:
 	if {-dbd::cache::player::%victim%::state} is "IN-GAME":
-		if {-dbd::arena::%{-dbd::cache::player::%victim%::arena}%::cache::status} is "STARTING" or "WAITING":
+		if {-dbd::arena::%{-dbd::cache::player::%victim%::arena}%::cache::status} is "Starting" or "Waiting":
 			cancel event
 			damage cause is void
 			teleport victim to yaml value "%{-dbd::cache::player::%victim%::arena}%.Spawn.Lobby" from "leaf.dbd.arenas"
@@ -1229,15 +1269,15 @@ on damage of player:
 					dbd_stats(attacker, "add", "KockedPlayers")					
 			wait a tick
 			set victim's health to 20
-		if {-dbd::arena::%{-dbd::cache::player::%victim%::arena}%::cache::status} is "RESTARTING":				
+		if {-dbd::arena::%{-dbd::cache::player::%victim%::arena}%::cache::status} is "Restarting":				
 			cancel event	
 	if metadata value "DBD_GAME" of victim is set:
 		cancel event
 
 function dbd_start_countdown(arena: text):
-	set {-dbd::arena::%{_arena}%::cache::status} to "STARTING"
+	set {-dbd::arena::%{_arena}%::cache::status} to "Starting"
 	loop {-dbd::arena::%{_arena}%::cache::seconds} times:
-		if {-dbd::arena::%{_arena}%::cache::status} is "STARTING" or "WAITING":
+		if {-dbd::arena::%{_arena}%::cache::status} is "Starting" or "Waiting":
 			size of {-dbd::arena::%{_arena}%::cache::ninjas::*} >= 2
 			remove 1 from {-dbd::arena::%{_arena}%::cache::seconds}	
 			if {-dbd::arena::%{_arena}%::cache::seconds} = 1 or 2 or 3 or 4 or 5 or 10:
@@ -1246,7 +1286,7 @@ function dbd_start_countdown(arena: text):
 				size of {-dbd::arena::%{_arena}%::cache::ninjas::*} >= 2:
 					dbd_start({_arena})
 				else:
-					set {-dbd::arena::%{_arena}%::cache::status} to "WAITING"
+					set {-dbd::arena::%{_arena}%::cache::status} to "Waiting"
 					set {-dbd::arena::%{_arena}%::cache::seconds} to yaml value "Settings.Timers.In-Lobby" from "leaf.dbd.config"
 			wait a second			
 		else:
@@ -1254,14 +1294,18 @@ function dbd_start_countdown(arena: text):
 		
 function dbd_resetarena(arena: text):
 	loop {-dbd::arena::%{_arena}%::cache::ninjas::*}:
-		if {-dbd::cache::player::%loop-value%::corpse} is set:
-			CorpseAPI.removeCorpse({-dbd::cache::player::%loop-value%::corpse})	
 		teleport loop-value-1 to yaml value "Locations.MainLobby" from "leaf.dbd.config"
 		delete scoreboard of loop-value-1		
 		dbd_no_name(loop-value-1, false)
 		dbd_send_summary(loop-value-1, {-dbd::cache::player::%loop-value-1%::arena})
 		delete {-dbd::cache::player::%loop-value-1%::*}			
 		dbd_clear_player(loop-value-1)	
+	loop {-dbd::arena::%{_arena}%::cache::corpses::*}:
+		loop-value-1.getChunk().load()
+		wait a tick
+		loop all entities in radius 2 of loop-value-1:
+			metadata value "DBD_GAME" of loop-entity is set:
+				clear loop-entity
 #	loop {-dbd::cache::arena::%{_arena}%::cache::generatorsON::*}:
 #		set {_loc} to loop-value-1
 #		{_loc}.getChunk().load()
@@ -1270,7 +1314,7 @@ function dbd_resetarena(arena: text):
 	dbd_gate({_arena}, "close")
 	delete {-dbd::arena::%{_arena}%::cache::*}			
 	set {-dbd::arena::%{_arena}%::cache::seconds} to yaml value "Settings.Timers.In-Lobby" from "leaf.dbd.config"
-	set {-dbd::arena::%{_arena}%::cache::status} to "WAITING"
+	set {-dbd::arena::%{_arena}%::cache::status} to "Waiting"
 							
 function dbd_setSlot(p: player, slot: number, t: text):
 	add "&a", "&b", "&c", "&d", "&e", "&1", "&2", "&3", "&4", "&5", "&6", "&7", "&8", "&9" and "&f" to {_d::*}
@@ -1284,7 +1328,7 @@ function dbd_createBoard(p: player, t: text):
 	if {_t} is "DBD-WAITING":
 		set scoreboard title of {_p} to yaml value "Scoreboard.Waiting.Name" from "leaf.dbd.config"
 		while {-dbd::cache::player::%{_p}%::arena} = {_arena}:	
-			if {-dbd::arena::%{-dbd::cache::player::%{_p}%::arena}%::cache::status} = "STARTING" or "WAITING":
+			if {-dbd::arena::%{-dbd::cache::player::%{_p}%::arena}%::cache::status} = "Starting" or "Waiting":
 				set {_slot} to 1
 				loop yaml list "Scoreboard.Waiting.Lines" from "leaf.dbd.config":
 					set {_value} to "%loop-value-1%"
@@ -1332,8 +1376,9 @@ function dbd_createBoard(p: player, t: text):
 									set {_distance} to distance between {_p} and loop-value-1
 									set {_player} to loop-value-1
 						if {_player} is set:
-							set {_msg} to replacer "{player}" and "{distance}" and "{status}" with "%{_player}%" and "%{_distance}%" and {-dbd::cache::player::%{_player}%::playingState} in yaml value "Settings.Misc.Action-Bar.Nearest-Player" from "leaf.dbd.config"
-							send action bar {_msg} to {_p}
+							if {_player} is not {_p}:
+								set {_msg} to replacer "{player}" and "{distance}" and "{status}" with "%{_player}%" and "%{_distance}%" and {-dbd::cache::player::%{_player}%::playingState} in yaml value "Settings.Misc.Action-Bar.Nearest-Player" from "leaf.dbd.config"
+								send action bar {_msg} to {_p}
 						delete {_player}
 						delete {_distance}
 			else:
