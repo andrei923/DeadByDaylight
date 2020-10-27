@@ -9,8 +9,6 @@
 ***
 > ▪ LeafSK ➥ https://github.com/andrei923/LeafSK/releases
 ***
-> ▪ CorpseReborn ➥ https://www.spigotmc.org/resources/corpsereborn.29875/
-***
 > ▪ PacketInjectorAPI ➥ https://www.spigotmc.org/resources/packetinjectorapi-send-packet-to-client-and-to-server.57931/
 ***
 
