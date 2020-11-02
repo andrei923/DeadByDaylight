@@ -9,7 +9,7 @@
 ***
 > ▪ LeafSK ➥ https://github.com/andrei923/LeafSK/releases
 ***
-> ▪ PacketInjectorAPI ➥ https://forums.skunity.com/resources/packetlistenernmsk.1147/
+> ▪ PacketListenerNMSK ➥ https://forums.skunity.com/resources/packetlistenernmsk.1147/
 ***
 
 ![GitHub release](https://img.shields.io/github/release/andrei923/DeadByDaylight.svg?style=for-the-badge)
