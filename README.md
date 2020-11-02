@@ -3,13 +3,13 @@
 # ➭ Dependencies:
 > ▪ Skript ➥ https://github.com/SkriptLang/Skript/releases
 
-> ▪ Skript for 1.8.8-1.12 https://github.com/SkriptLang/Skript/releases/tag/dev36
+> ▪ Skript for 1.8.8 https://github.com/Matocolotoe/Skript-1.8/releases
 ***
 > ▪ TitleManager ➥ https://www.spigotmc.org/resources/titlemanager.1049/
 ***
 > ▪ LeafSK ➥ https://github.com/andrei923/LeafSK/releases
 ***
-> ▪ PacketInjectorAPI ➥ https://www.spigotmc.org/resources/packetinjectorapi-send-packet-to-client-and-to-server.57931/
+> ▪ PacketInjectorAPI ➥ https://forums.skunity.com/resources/packetlistenernmsk.1147/
 ***
 
 ![GitHub release](https://img.shields.io/github/release/andrei923/DeadByDaylight.svg?style=for-the-badge)
