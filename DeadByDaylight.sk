@@ -14,7 +14,6 @@ import:
 	com.leaf.nbt.nbtapi.NBTContainer	
 	fr.mrmicky.fastparticle.FastParticle
 	fr.mrmicky.fastparticle.ParticleType	
-	com.fren_gor.packetUtils.events.PacketRetriveEvent
 	org.bukkit.event.player.PlayerInteractEvent
 	org.bukkit.event.player.PlayerToggleFlightEvent
 	org.bukkit.scoreboard.Team
@@ -25,7 +24,7 @@ import:
 options:
 
 	#do not touch this -_-
-	plugin-version: 2.0.2
+	plugin-version: 2.0.3
 
 
 local effect create scoreboard for %player%:	
@@ -158,7 +157,7 @@ on load:
 	check_yaml("config", "Settings.Misc.Grab.Target", "100", "number")		
 	check_yaml("config", "Settings.Misc.Generator.Radius", "4", "number")			
 	check_yaml("config", "Settings.Misc.Generator.Target", "1000", "number")	
-	check_yaml("config", "Settings.Misc.Generator.NeededToEscape", "-1", "number")	
+	check_yaml("config", "Settings.Misc.Generator.MinusNeededToEscape", "1", "number")	
 	check_yaml("config", "Settings.Misc.Generator.Holo", "&cGenerator ##{id}||&cStatus: {status}", "list")	
 	check_yaml("config", "Settings.Misc.Action-Bar.Starting-Repaired", "&eGenerator Repaired.")			
 	check_yaml("config", "Settings.Misc.Action-Bar.Starting-Repairing", "&aStarting repairing generator...")	
@@ -699,6 +698,7 @@ function dbd_leave(p: player, quit: boolean = true):
 				send replacer "{player}" with {_p}'s display name in yaml value "Messages.Leave" from "leaf.dbd.config" to {-dbd::arena::%{-dbd::cache::player::%{_p}%::arena}%::cache::ninjas::*}	
 			if {-dbd::cache::player::%{_p}%::role} = "Hunter":
 				dbd_resetarena({_arena})
+			dbd_spawn_corpse({_p}, "Remove")
 		dbd_no_name({_p}, false)		
 		delete {-dbd::cache::player::%{_p}%::*}	
 		dbd_clear_player({_p})
@@ -816,6 +816,8 @@ function dbd_start(arena: text):
 				set {_r} to a random element out of {_colors::*}
 				dye loop-value-1's chestplate {_r}
 				remove {_r} from {_colors::*} 
+				wait a tick
+				set {-dbd::cache::player::%loop-value-1%::chestplate} to loop-value-1's chestplate
 	dbd_game_sounds({_arena})
 
 function dbd_getPlayers(arena: text, type: text) :: number:
@@ -832,7 +834,6 @@ function dbd_getPlayers(arena: text, type: text) :: number:
 	return 0
 
 function dbd_CurrentPlayers(arena: text):
-	stop
 	set {_int} to dbd_getPlayers({_arena}, "Alive")
 	if {_int} = 0:
 		set {-dbd::cache::player::%{-dbd::arena::%{_arena}%::cache::hunter}%::GameStats::EscapedStopped} to true
@@ -930,7 +931,8 @@ function dbd_generator_fix(arena: text, generator: text):
 #			set loop-block to active redstone lamp
 #			add location of loop-block to {-dbd::cache::arena::%{_arena}%::cache::generatorsON::*}
 
-	if dbd_getFixedGenerators({_arena}) = size of yaml nodes with keys "%{_arena}%.Generators" from "leaf.dbd.arenas" - yaml value "Settings.Misc.Generator.NeededToEscape" from "leaf.dbd.config":
+	set {_total} to size of yaml nodes with keys "%{_arena}%.Generators" from "leaf.dbd.arenas"
+	if dbd_getFixedGenerators({_arena}) = {_total} - yaml value "Settings.Misc.Generator.MinusNeededToEscape" from "leaf.dbd.config":
 		set {-dbd::arena::%{_arena}%::cache::generator::status::ALL} to "&a✔"	
 		dbd_gate({_arena}, "open")	
 		set {_loc} to yaml value "%{_arena}%.Escape" from "leaf.dbd.arenas"
@@ -1014,7 +1016,9 @@ on sneak toggle:
 			if {-dbd::cache::player::%loop-player%::playingState} = "Hanging" or "Laying":
 				set {_c} to "&a"
 				set {_type} to {-dbd::cache::player::%loop-player%::playingState}	
-				set {_player} to loop-value-1												
+				set {_player} to loop-value-1		
+	if {-dbd::cache::player::%player%::playingState} is set:			
+		stop							
 	if {_player} is set:
 		set {_int} to 0
 		{_player} is not player
@@ -1058,11 +1062,15 @@ on sneak toggle:
 						set {-dbd::cache::player::%{_player}%::damageState} to 2
 						add 1 to {-dbd::cache::player::%player%::GameStats::FreedPlayers}
 						dbd_stats(player, "add", "FreedPlayers")
+						wait a second
+						set {_player}'s chestplate to {-dbd::cache::player::%{_player}%::chestplate}
 					if {-dbd::cache::player::%player%::role} = "Hunter":				
 						dbd_spawn_corpse({_player}, "Remove")
 						set {-dbd::cache::player::%{_player}%::playingState} to "Grabbed"
 						set {_player}'s gamemode to survival
-						make {_player} ride player 														
+						make {_player} ride player 
+						wait a second
+						set {_player}'s chestplate to {-dbd::cache::player::%{_player}%::chestplate}														
 				wait a tick
 			else:
 				delete {-dbd::cache::player::%{_player}%::HelpingTarget}
@@ -1217,10 +1225,9 @@ on place:
 	if {-dbd::cache::player::%player%::state} is "IN-GAME":
 		cancel event
 
-on PacketRetriveEvent:
-	if "%event.getPacketName()%" is "PacketPlayInSteerVehicle":
-		if {-dbd::cache::player::%event.getPlayer()%::playingState} is "Grabbed":
-			event.setCancelled(true)
+on packet PacketPlayInSteerVehicle:
+	if {-dbd::cache::player::%player%::playingState} is "Grabbed":
+		cancel event
 
 function dbd_show_blood(p: player):
 	if {-dbd::cache::player::%{_p}%::state} is set:
@@ -1377,8 +1384,9 @@ function dbd_createBoard(p: player, t: text):
 									set {_player} to loop-value-1
 						if {_player} is set:
 							if {_player} is not {_p}:
-								set {_msg} to replacer "{player}" and "{distance}" and "{status}" with "%{_player}%" and "%{_distance}%" and {-dbd::cache::player::%{_player}%::playingState} in yaml value "Settings.Misc.Action-Bar.Nearest-Player" from "leaf.dbd.config"
-								send action bar {_msg} to {_p}
+								if distance between {_p} and {_player} > 2:
+									set {_msg} to replacer "{player}" and "{distance}" and "{status}" with "%{_player}%" and "%{_distance}%" and {-dbd::cache::player::%{_player}%::playingState} in yaml value "Settings.Misc.Action-Bar.Nearest-Player" from "leaf.dbd.config"
+									send action bar {_msg} to {_p}
 						delete {_player}
 						delete {_distance}
 			else:
