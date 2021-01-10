@@ -549,12 +549,12 @@ function dbd_send_summary(p: player, arena: text):
 
 function dbd_gate(arena: text, type: text):
 	if {_type} = "open":
-		loop blocks within yaml value "%{_arena}%.Gate.Pos1" from "leaf.dbd.arenas" to yaml value "%{_arena}%.Gate.Pos2" from "leaf.dbd.arenas":
+		loop blocks within yaml value "%{_arena}%.Gate.Pos1" from "leaf.dbd.arenas" and yaml value "%{_arena}%.Gate.Pos2" from "leaf.dbd.arenas":
 			set {dbd::cache::arena::%{_arena}%::GateBlocks::Type::%location of loop-block%} to type of loop-block
 			set {dbd::cache::arena::%{_arena}%::GateBlocks::Location::%location of loop-block%} to location of loop-block
 			set loop-block to air
 	if {_type} = "close":
-		loop blocks within yaml value "%{_arena}%.Gate.Pos1" from "leaf.dbd.arenas" to yaml value "%{_arena}%.Gate.Pos2" from "leaf.dbd.arenas":
+		loop blocks within yaml value "%{_arena}%.Gate.Pos1" from "leaf.dbd.arenas" and yaml value "%{_arena}%.Gate.Pos2" from "leaf.dbd.arenas":
 			set block at {dbd::cache::arena::%{_arena}%::GateBlocks::Location::%location of loop-block%} to {dbd::cache::arena::%{_arena}%::GateBlocks::Type::%location of loop-block%}
 		delete {dbd::cache::arena::%{_arena}%::GateBlocks::*}
 
