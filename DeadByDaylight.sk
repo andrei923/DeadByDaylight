@@ -24,7 +24,7 @@ import:
 options:
 
 	#do not touch this -_-
-	plugin-version: 2.0.3
+	plugin-version: 2.0.4
 
 
 local effect create scoreboard for %player%:	
