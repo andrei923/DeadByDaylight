@@ -1,15 +1,21 @@
 # ➭ Dead By Daylight Minigame for Minecraft.
 
-# ➭ Dependencies:
+## ➭ Dependencies for Latest version:
+***
 > ▪ Skript ➥ https://github.com/SkriptLang/Skript/releases
 
-> ▪ Skript for 1.8.8 https://github.com/Matocolotoe/Skript-1.8/releases
-***
 > ▪ TitleManager ➥ https://www.spigotmc.org/resources/titlemanager.1049/
-***
+
 > ▪ LeafSK ➥ https://github.com/andrei923/LeafSK/releases
 ***
-> ▪ PacketListenerNMSK ➥ https://forums.skunity.com/resources/packetlistenernmsk.1147/
+
+## ➭ Dependencies for 1.8.8:
+***
+> ▪ Skript ➥ https://github.com/Matocolotoe/Skript-1.8/releases/tag/2.5
+
+> ▪ TitleManager ➥ https://www.spigotmc.org/resources/titlemanager.1049/
+
+> ▪ LeafSK ➥ https://github.com/andrei923/LeafSK/releases
 ***
 
 ![GitHub release](https://img.shields.io/github/release/andrei923/DeadByDaylight.svg?style=for-the-badge)
