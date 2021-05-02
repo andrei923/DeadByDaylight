@@ -623,7 +623,6 @@ function dbd_heartbeat(p: player):
 					set {_distance} to 1
 				set {_v} to 0.1 + "0.%10 - {_distance}%" parsed as number
 				loop-value-1.playSound(location of loop-value-1, {-dbd::cache::Sounds::HeartBeat}, {_v} and 1)
-				dbd_play_sound()
 		wait a second
 
 function dbd_leave(p: player, quit: boolean = true):
@@ -829,7 +828,7 @@ function dbd_hook_player(p: player, hook: text):
 	set {-dbd::cache::player::%{_p}%::playingState} to "Hanging"
 	{_p}.setAllowFlight(true)	
 	{_p}.setFlying(true)	
-	]({-dbd::cache::player::%{_p}%::arena})
+	dbd_CheckPlayers({-dbd::cache::player::%{_p}%::arena})
 	set {_int} to 0
 	set {_target} to yaml value "Settings.Misc.Hook.DeathTarget" from "leaf.dbd.config"
 	loop {-dbd::arena::%{-dbd::cache::player::%{_p}%::arena}%::cache::ninjas::*}:
@@ -1269,7 +1268,7 @@ function dbd_resetarena(arena: text):
 							
 function dbd_createBoard(p: player, t: text):
 	set {_arena} to {-dbd::cache::player::%{_p}%::arena}
-	create scoreboard for {_p}}
+	create scoreboard for {_p}
 	if {_t} is "DBD-WAITING":
 		set scoreboard title of {_p} to yaml value "Scoreboard.Waiting.Name" from "leaf.dbd.config"
 		while {-dbd::cache::player::%{_p}%::arena} = {_arena}:	
