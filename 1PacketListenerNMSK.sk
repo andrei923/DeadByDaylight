@@ -1,0 +1,95 @@
+#Made by TPGamesNL, https://forums.skunity.com/resources/packetlistenernmsk.1147/
+
+import:
+	org.bukkit.Bukkit
+	ch.njol.skript.Skript
+	io.netty.channel.ChannelInboundHandler
+	io.netty.channel.ChannelOutboundHandler
+
+on load:
+	set {nms} to Bukkit.getServer().getClass().getPackage().getName().split("\.")[3]
+
+function injectPlayerConnection(p: player):
+	{_p} is online
+	create section with {_proxy}, {_ctx} stored in {_f::channelActive}:
+		{_ctx}.fireChannelActive()
+	create section with {_proxy}, {_ctx} stored in {_f::channelInactive}:
+		{_ctx}.fireChannelInactive()
+	create section with {_proxy}, {_ctx}, {_packet} stored in {_f::channelRead}:
+		set {_ev::player} to {_p}
+		set {_ev::string} to {_packet}.getClass().getSimpleName()
+		set {_data::packet} to {_packet}
+		set {_evt} to custom event "packet_evt" with {_ev::*} using data {_data::*}
+		call event {_evt}
+		
+		if {_evt} is not cancelled:
+			{_ctx}.fireChannelRead({_packet})
+	create section with {_proxy}, {_ctx} stored in {_f::channelReadComplete}:
+		{_ctx}.fireChannelReadComplete()
+	create section with {_proxy}, {_ctx} stored in {_f::channelRegistered}:
+		{_ctx}.fireChannelRegistered()
+	create section with {_proxy}, {_ctx} stored in {_f::channelUnregistered}:
+		{_ctx}.fireChannelUnregistered()
+	create section with {_proxy}, {_ctx} stored in {_f::channelWritabilityChanged}:
+		{_ctx}.fireChannelWritabilityChanged()
+	create section with {_proxy}, {_ctx}, {_throwable} stored in {_f::exceptionCaught}:
+		{_ctx}.fireExceptionCaught({_throwable})
+	create section with {_proxy}, {_ctx}, {_evt} stored in {_f::userEventTriggered}:
+		{_ctx}.fireuserEventTriggered({_evt})
+	
+	create section with {_proxy}, {_ctx}, {_localAddress}, {_channelPromise} stored in {_f::bind}:
+		{_ctx}.bind({_localAddress}, {_channelPromise})
+	create section with {_proxy}, {_ctx}, {_channelPromise} stored in {_f::close}:
+		{_ctx}.close({_channelPromise})
+	create section with {_proxy}, {_ctx}, {_remoteAddress}, {_localAddress}, {_channelPromise} stored in {_f::connect}:
+		{_ctx}.connect({_remoteAddress}, {_localAddress}, {_channelPromise})
+	create section with {_proxy}, {_ctx}, {_channelPromise} stored in {_f::deregister}:
+		{_ctx}.deregister({_channelPromise})
+	create section with {_proxy}, {_ctx}, {_channelPromise} stored in {_f::disconnect}:
+		{_ctx}.disconnect({_channelPromise})
+	create section with {_proxy}, {_ctx} stored in {_f::flush}:
+		{_ctx}.flush()
+	create section with {_proxy}, {_ctx} stored in {_f::read}:
+		{_ctx}.read()
+	create section with {_proxy}, {_ctx}, {_packet}, {_channelPromise} stored in {_f::write}:
+		set {_ev::player} to {_p}
+		set {_ev::string} to {_packet}.getClass().getSimpleName()
+		set {_data::packet} to {_packet}
+		set {_evt} to custom event "packet_evt" with {_ev::*} using data {_data::*}
+		call event {_evt}
+		
+		if {_evt} is not cancelled:
+			{_ctx}.write({_packet}, {_channelPromise})
+	
+	set {_handler} to new proxy instance of ChannelInboundHandler, ChannelOutboundHandler using {_f::*}
+	
+	set {_channel} to {_p}.getHandle().playerConnection.networkManager.channel
+	
+	{_channel}.pipeline().addBefore("packet_handler", "reflect_packets", {_handler})
+
+event "packet_evt":
+	pattern: packet [<(.+)>]
+	event-values: player, string
+	parse:
+		set {_packetType} to first element of regex-1
+		if {_packetType} is not set:
+			continue
+		
+		if class "net.minecraft.server.%{nms}%.%{_packetType}%" is set:
+			continue
+		else:
+			Skript.error("That packet doesn't exist")
+	check:
+		if {_packetType} is not set:
+			continue
+		if event-string is {_packetType}:
+			continue
+
+expression [event-]packet:
+	usable in:
+		custom event "packet_evt"
+	get:
+		return event.getData("packet")
+
+on join:
+	injectPlayerConnection(player)
