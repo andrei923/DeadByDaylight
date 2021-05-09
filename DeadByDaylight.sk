@@ -18,7 +18,7 @@ import:
 options:
 
 	#do not touch this -_-
-	plugin-version: 2.1.0
+	plugin-version: 2.2.0
 
 
 local expression [leaf] progress from %number% and %number% with size %number% and text %text% and %text%:
@@ -699,6 +699,11 @@ function dbd_update_generator_holo(arena: text, generator: text):
 
 function dbd_start(arena: text):
 	set {-dbd::arena::%{_arena}%::cache::status} to "IN-GAME"
+	#
+	set {_radius} to yaml value "%{_arena}%.Spawn.Survivor" from "leaf.dbd.arenas"
+	loop all entities in radius 1000 of {_radius}:
+		clear loop-entity
+	#
 	if {-dbd::arena::%{_arena}%::cache::selectedHunter} is not set:
 		set {_r} to a random element out of {-dbd::arena::%{_arena}%::cache::ninjas::*}		
 		set {-dbd::cache::player::%{_r}%::role} to "Hunter"
@@ -857,19 +862,18 @@ function dbd_hook_player(p: player, hook: text):
 			stop		
 		wait a tick
 
-
 function dbd_generator_fix(arena: text, generator: text):
 	set {-dbd::arena::%{_arena}%::cache::generator::state::status::%{_generator}%} to "Fixed"
 	set {_w} to world of yaml value "%{_arena}%.Generators.%{_generator}%" from "leaf.dbd.arenas"
 	{_w}.playSound(yaml value "%{_arena}%.Generators.%{_generator}%" from "leaf.dbd.arenas", {-dbd::cache::Sounds::Fixed}, 1 and 1)
 	spawn an firework at {-dbd::cache::arena::%{_arena}%::generator::%{_generator}%}
 	dbd_update_generator_holo({_arena}, {_generator})	
-#	
+
 #	loop all blocks in radius 5 of yaml value "%{_arena}%.Generators.%{_generator}%" from "leaf.dbd.arenas":
 #		loop-block != air
 #		if "%loop-block%" contains "lamp" or "resdstone lamp":
 #			turn of loop-block
-#			set loop-block to active redstone lamp
+#			set loop-block to lit redstone lamp
 #			add location of loop-block to {-dbd::cache::arena::%{_arena}%::cache::generatorsON::*}
 
 	set {_total} to size of yaml nodes with keys "%{_arena}%.Generators" from "leaf.dbd.arenas"
@@ -949,7 +953,7 @@ on sneak toggle:
 	if {-dbd::cache::player::%player%::playingState} is set:			
 		stop	
 	wait a tick
-	player.isSneaking()	
+	player.isSneaking() is true
 	if {-dbd::cache::player::%player%::role} = "Hunter":		
 		player.getPassenger() is not set
 		loop all players in radius 2 of player:
@@ -976,18 +980,18 @@ on sneak toggle:
 			set {_target} to yaml value "Settings.Misc.Hook.Target" from "leaf.dbd.config"	
 			set {-dbd::cache::player::%{_player}%::HelpingTarget} to player	
 		loop 30 times:
-			if player.isSneaking():
+			if player.isSneaking() is true:
 				send action bar {_actionBar} to player
 			else:
 				delete {-dbd::cache::player::%{_player}%::HelpingTarget}
 				stop
-			wait a tick					
+			wait a tick	
+		set {_int} to 0					
 		loop {_target} times:
 			if distance between player and {_player} > 3:
 				delete {-dbd::cache::player::%{_player}%::HelpingTarget}
 				stop
-			set {_int} to 0
-			player.isSneaking():
+			player.isSneaking() is true:
 				add 1 to {_int}
 				set {_actionBar} to progress from {_int} and {_target} with size 20 and text "%{_c}%■" and "&7■"
 				send action bar "&f%{_int}% %{_actionBar}% &f%{_target}%" to player
@@ -1006,20 +1010,19 @@ on sneak toggle:
 						set {-dbd::cache::player::%{_player}%::damageState} to 2
 						add 1 to {-dbd::cache::player::%player%::GameStats::FreedPlayers}
 						dbd_stats(player, "add", "FreedPlayers")
-						wait a second
+						wait a tick
 						set {_player}'s chestplate to {-dbd::cache::player::%{_player}%::chestplate}
 					if {-dbd::cache::player::%player%::role} = "Hunter":				
 						dbd_spawn_corpse({_player}, "Remove")
 						set {-dbd::cache::player::%{_player}%::playingState} to "Grabbed"
 						set {_player}'s gamemode to survival
 						make {_player} ride player 
-						wait a second
+						wait a tick
 						set {_player}'s chestplate to {-dbd::cache::player::%{_player}%::chestplate}														
 				wait a tick
 			else:
 				delete {-dbd::cache::player::%{_player}%::HelpingTarget}
 				stop
-		stop
 	if {-dbd::cache::player::%player%::role} = "Hunter":
 		if player.getPassenger() is set:
 			loop yaml nodes with keys "%{-dbd::cache::player::%player%::arena}%.Hooks" from "leaf.dbd.arenas":
@@ -1028,7 +1031,7 @@ on sneak toggle:
 						set {_hook} to loop-value-1
 			if {_hook} is set:
 				loop 30 times:
-					if player.isSneaking():
+					if player.isSneaking() is true:
 						send action bar yaml value "Settings.Misc.Action-Bar.Starting-Hooking" from "leaf.dbd.config" to player
 					else:
 						stop
@@ -1038,7 +1041,7 @@ on sneak toggle:
 				loop {_target} times:
 					if distance between player and yaml value "%{-dbd::cache::player::%player%::arena}%.Hooks.%{_hook}%" from "leaf.dbd.arenas" > yaml value "Settings.Misc.Hook.Radius" from "leaf.dbd.config":
 						stop
-					player.isSneaking():
+					player.isSneaking() is true:
 						add 1 to {_int}
 						set {_actionBar} to progress from {_int} and {_target} with size 20 and text "&c■" and "&7■"
 						send action bar "&f%{_int}% %{_actionBar}% &f%{_target}%" to player
@@ -1058,7 +1061,7 @@ on sneak toggle:
 		if {_generator} is set:
 			if {-dbd::cache::player::%player%::generator::state::%{_generator}%} != "working" or "success":
 				loop 70 times:
-					if player.isSneaking():
+					if player.isSneaking() is true:
 						send action bar yaml value "Settings.Misc.Action-Bar.Starting-Repairing" from "leaf.dbd.config" to player
 					else:
 						stop
@@ -1281,7 +1284,7 @@ function dbd_createBoard(p: player, t: text):
 					replace all "{timer}" with "%{-dbd::arena::%{_arena}%::cache::seconds}%" in {_value}
 					replace all "{players}" with "%size of {-dbd::arena::%{_arena}%::cache::ninjas::*}%" in {_value}
 					replace all "{arena}" with "%{-dbd::cache::player::%{_p}%::arena}%" in {_value}
-					set scoreboard line {_slot} of {_p} to "%{-dbd::cache::SB::%{_slot}%}%%{_value}%"
+					set scoreboard line {_slot} of {_p} to colored "%{-dbd::cache::SB::%{_slot}%}%%{_value}%"
 					add 1 to {_slot}
 			else:
 				stop
@@ -1307,7 +1310,7 @@ function dbd_createBoard(p: player, t: text):
 					replace all "{SurvivorsStatus}" with "%{-dbd::arena::%{_arena}%::cache::SurvivorsStatus}%" in {_value}												 							
 					replace all "{health}" with "%{-dbd::cache::player::%{_p}%::damageState}%" in {_value} 
 					replace all "{player}" with {_p}'s displayname in {_value}
-					set scoreboard line {_slot} of {_p} to "%{-dbd::cache::SB::%{_slot}%}%%{_value}%"
+					set scoreboard line {_slot} of {_p} to colored "%{-dbd::cache::SB::%{_slot}%}%%{_value}%"
 					add 1 to {_slot}
 				if {-dbd::cache::player::%{_p}%::role} is "Survivor":
 					if {-dbd::arena::%{-dbd::cache::player::%{_p}%::arena}%::cache::status} = "IN-GAME":
@@ -1317,8 +1320,8 @@ function dbd_createBoard(p: player, t: text):
 								if {_distance} is not set:
 									set {_distance} to 1000
 								if distance between {_p} and {_player} < {_distance}:
+									set {_player} to loop-value-1								
 									set {_distance} to distance between {_p} and loop-value-1
-									set {_player} to loop-value-1
 						if {_player} is set:
 							if {_player} is not {_p}:
 								if distance between {_p} and {_player} > 2:
